@@ -621,3 +621,276 @@ class Person implements Comparable<Person> {
 // Comparator - 外部传入
 list.sort((a, b) -> a.getAge() - b.getAge());
 ```
+
+
+---
+
+## 十三、异常处理
+
+### 1. 异常体系
+```
+Throwable
+├── Error（系统级，无法处理）
+│   └── OutOfMemoryError, StackOverflowError
+└── Exception（程序可处理）
+    ├── RuntimeException（非受检）
+    │   └── NullPointerException, ArrayIndexOutOfBoundsException
+    └── 其他（受检）
+        └── IOException, SQLException
+```
+
+### 2. 受检 vs 非受检异常
+| 类型 | 特点 | 例子 |
+|------|------|------|
+| 受检异常 | 编译时必须处理 | IOException, SQLException |
+| 非受检异常 | 运行时异常，可以不处理 | NullPointerException |
+
+**记忆**：RuntimeException 及其子类是非受检，其他都是受检
+
+### 3. throw vs throws
+- `throw`：方法内部抛出异常
+- `throws`：方法签名声明可能抛出的异常
+
+---
+
+## 十四、Java 8+ 新特性
+
+### 1. Lambda 表达式
+```java
+// 匿名内部类
+new Thread(new Runnable() {
+    public void run() { System.out.println("Hello"); }
+}).start();
+
+// Lambda
+new Thread(() -> System.out.println("Hello")).start();
+```
+
+### 2. 函数式接口
+- 只有一个抽象方法的接口
+- `@FunctionalInterface` 让编译器检查
+- 例如：Runnable、Comparator、Consumer
+
+### 3. Stream API
+- `filter()`：过滤，保留符合条件的
+- `map()`：转换/映射每个元素
+- `collect()`：收集结果
+
+### 4. Optional
+- 解决 NullPointerException
+- 常用方法：
+  - `of()` / `ofNullable()`：创建
+  - `orElse()`：为空时返回默认值
+  - `ifPresent()`：不为空时执行
+
+```java
+Optional.ofNullable(user)
+    .map(User::getName)
+    .orElse("默认名");
+```
+
+---
+
+## 十五、I/O 操作
+
+### 1. 字节流 vs 字符流
+| 类型 | 基类 | 场景 |
+|------|------|------|
+| 字节流 | InputStream/OutputStream | 图片、视频、任何文件 |
+| 字符流 | Reader/Writer | 文本文件 |
+
+### 2. 缓冲流
+- 作用：减少 IO 次数，批量读写，提高效率
+- 不是一个字节一个字节读，而是一次读一批到缓冲区
+
+### 3. try-with-resources
+```java
+// 自动关闭资源，不用手动 close()
+try (FileInputStream fis = new FileInputStream("file.txt")) {
+    // 使用流
+} // 自动关闭
+```
+
+### 4. 序列化
+- 对象 → 字节流，用于存储或网络传输
+- 实现 `Serializable` 接口
+- `transient` 关键字：不参与序列化
+
+---
+
+## 十六、核心 API 补充
+
+### 1. new String("abc") 创建几个对象
+- 如果常量池已有 "abc"：1 个（堆中的对象）
+- 如果常量池没有：2 个（常量池 + 堆）
+
+### 2. equals 和 hashCode 关系
+- HashMap/HashSet 先用 hashCode 定位桶，再用 equals 比较
+- **规则**：equals 相等 → hashCode 必须相等
+- 只重写 equals 不重写 hashCode 会导致 HashMap 出问题
+
+### 3. LocalDate vs Date
+| 对比 | Date | LocalDate |
+|------|------|-----------|
+| 版本 | 旧 API | Java 8 新 API |
+| 可变性 | 可变 | 不可变 |
+| 线程安全 | 不安全 | 安全 |
+| API | 难用 | 友好 |
+
+### 4. String.intern()
+- 把字符串放入常量池
+- 如果常量池已有，返回常量池的引用
+```java
+String s1 = new String("abc");
+String s2 = s1.intern();  // 返回常量池中的 "abc"
+s2 == "abc"  // true
+```
+
+
+---
+
+## 十七、进阶知识点
+
+### 1. ThreadLocal
+- **是什么**：线程本地变量，每个线程有自己的副本
+- **用途**：存储线程私有数据（如用户信息、事务上下文）
+- **注意**：用完要 `remove()`，否则内存泄漏
+
+```java
+ThreadLocal<String> local = new ThreadLocal<>();
+local.set("value");
+local.get();
+local.remove();  // 用完必须清理！
+```
+
+### 2. synchronized 锁对象
+| 用法 | 锁的对象 |
+|------|---------|
+| 实例方法 | this（当前对象） |
+| 静态方法 | Class 对象 |
+| 代码块 | 指定的对象 |
+
+```java
+synchronized void method() {}        // 锁 this
+static synchronized void method() {} // 锁 Class
+synchronized (obj) {}                // 锁 obj
+```
+
+### 3. MVCC（多版本并发控制）
+- **作用**：解决读写并发问题
+- **原理**：每行数据有多个版本，读操作读取快照，不加锁
+- **好处**：读不阻塞写，写不阻塞读，提高并发性能
+
+### 4. Spring Bean 作用域
+| 作用域 | 说明 |
+|--------|------|
+| singleton | 默认，单例 |
+| prototype | 每次获取创建新实例 |
+| request | 每个 HTTP 请求一个 |
+| session | 每个会话一个 |
+
+### 5. @Autowired vs @Resource
+| 注解 | 来源 | 注入方式 |
+|------|------|---------|
+| @Autowired | Spring | 按类型 |
+| @Resource | JDK | 按名称 |
+
+### 6. Redis ZSet 底层
+- **跳表（SkipList）**：支持范围查询 O(logN)
+- **哈希表**：支持单个元素查找 O(1)
+
+### 7. ArrayList 扩容
+- 初始容量：**10**
+- 扩容倍数：**1.5 倍**
+- `newCapacity = oldCapacity + (oldCapacity >> 1)`
+
+### 8. String == 比较
+```java
+String s1 = "abc";
+String s2 = "ab" + "c";   // 编译期优化 → "abc"
+String s3 = s + "c";      // 运行时拼接 → 堆中新对象
+
+s1 == s2  // true（都指向常量池）
+s1 == s3  // false（s3 在堆中）
+```
+
+
+---
+
+## 十八、幂等性方案
+
+### 唯一 ID + 去重表（最常用）
+
+**流程**：
+1. 客户端生成唯一请求 ID
+2. 服务端查去重表，存在则返回
+3. 不存在则执行业务，插入去重表
+
+**去重表**：
+```sql
+CREATE TABLE request_dedupe (
+    request_id VARCHAR(64) UNIQUE,  -- 唯一索引！
+    created_at DATETIME
+);
+```
+
+**代码**：
+```java
+@Transactional
+public Result createOrder(String requestId, OrderDTO order) {
+    if (dedupeMapper.exists(requestId)) {
+        return Result.success("重复请求");
+    }
+    dedupeMapper.insert(requestId);
+    orderService.create(order);
+    return Result.success("成功");
+}
+```
+
+### 方案对比
+| 方案 | 优点 | 缺点 |
+|------|------|------|
+| 唯一 ID + 去重表 | 可靠，通用 | 需要额外表 |
+| Redis SETNX | 快，简单 | 可能丢数据 |
+| 数据库唯一约束 | 简单 | 只能防重复插入 |
+| 状态机 | 业务语义清晰 | 需要状态字段 |
+
+---
+
+## 十九、场景排查
+
+### CPU 100% 排查
+```bash
+1. top                    # 找 CPU 高的进程 PID
+2. top -Hp PID            # 找 CPU 高的线程
+3. printf '%x' 线程ID     # 转十六进制
+4. jstack PID | grep 十六进制  # 看堆栈
+```
+常见原因：死循环、频繁 GC、锁竞争
+
+### 接口慢排查
+1. 链路追踪（Skywalking）
+2. 慢 SQL 日志
+3. 缓存命中率
+4. 网络延迟
+5. 锁等待
+
+### 连接池满
+原因：慢 SQL、事务未提交、连接泄漏
+解决：优化 SQL、检查事务、增大连接池
+
+---
+
+## 二十、高频记忆点
+
+| 知识点 | 答案 |
+|--------|------|
+| ArrayList 初始/扩容 | 10, 1.5 倍 |
+| 函数式接口 | 只有一个抽象方法 |
+| ThreadLocal 用完 | remove() |
+| Bean 默认作用域 | singleton |
+| HashMap JDK8 | 红黑树 |
+| MQ 三大作用 | 异步、削峰、解耦 |
+| synchronized 锁方法 | 锁 this |
+| ZSet 底层 | 跳表 + 哈希表 |
+| 幂等性方案 | 唯一 ID + 去重表 |

@@ -894,3 +894,108 @@ public Result createOrder(String requestId, OrderDTO order) {
 | synchronized 锁方法 | 锁 this |
 | ZSet 底层 | 跳表 + 哈希表 |
 | 幂等性方案 | 唯一 ID + 去重表 |
+
+
+---
+
+## 二十一、算法 - 单调队列
+
+### 滑动窗口最大值
+
+**场景**：求滑动窗口内的最大/最小值
+
+**核心思路**：
+1. 用 Deque 存下标（不是值）
+2. 维护单调递减队列
+3. 队首就是当前窗口最大值
+
+**模板**：
+```java
+Deque<Integer> deque = new LinkedList<>();
+for (int i = 0; i < n; i++) {
+    // 1. 移除过期（超出窗口）
+    while (!deque.isEmpty() && deque.peekFirst() < i - k + 1)
+        deque.pollFirst();
+    // 2. 维护单调（踢掉比当前小的）
+    while (!deque.isEmpty() && nums[deque.peekLast()] < nums[i])
+        deque.pollLast();
+    // 3. 入队
+    deque.offerLast(i);
+    // 4. 取结果
+    if (i >= k - 1)
+        result[i - k + 1] = nums[deque.peekFirst()];
+}
+```
+
+**记忆口诀**：过期踢头，小的踢尾，队首最大
+
+
+---
+
+## 二十二、高频面试题补充
+
+### 1. binlog vs redo log
+| 对比 | binlog | redo log |
+|------|--------|----------|
+| 层级 | MySQL Server 层 | InnoDB 引擎层 |
+| 类型 | 逻辑日志 | 物理日志 |
+| 用途 | 主从复制 | 崩溃恢复 |
+
+### 2. CAP 理论
+- **C**onsistency：一致性
+- **A**vailability：可用性
+- **P**artition tolerance：分区容错
+- 三者只能满足两个
+
+### 3. HashMap 并发问题
+- JDK7：头插法，并发扩容可能死循环
+- JDK8：尾插法，数据覆盖丢失
+
+### 4. 线程池拒绝策略
+| 策略 | 行为 |
+|------|------|
+| AbortPolicy | 抛异常（默认） |
+| CallerRunsPolicy | 调用者线程执行 |
+| DiscardPolicy | 直接丢弃 |
+| DiscardOldestPolicy | 丢弃最老的 |
+
+### 5. TCP 粘包解决
+- 消息头带长度
+- 分隔符
+- 固定长度
+
+### 6. 回表查询
+- 二级索引 → 主键 → 回主键索引查数据
+- 避免：覆盖索引（查询字段都在索引中）
+
+### 7. 事务传播行为
+- REQUIRED：有就加入，没有就新建（默认）
+- REQUIRES_NEW：总是新建事务
+
+### 8. Redis 过期删除
+- 惰性删除：访问时检查
+- 定期删除：定时随机抽查
+
+### 9. BIO/NIO/AIO
+| 类型 | 特点 |
+|------|------|
+| BIO | 同步阻塞，一连接一线程 |
+| NIO | 同步非阻塞，多路复用 |
+| AIO | 异步非阻塞 |
+
+### 10. 分布式 ID 方案
+- UUID：简单但无序
+- 雪花算法：有序，推荐
+- 数据库自增：简单但有瓶颈
+- Redis 自增：高性能
+
+### 11. 消息不丢失
+| 环节 | 方案 |
+|------|------|
+| 生产者 | confirm 机制 |
+| Broker | 持久化 |
+| 消费者 | 手动 ACK |
+
+### 12. 哈希槽
+- Redis Cluster 用 16384 个哈希槽
+- key 通过 CRC16 算法分配到槽

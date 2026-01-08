@@ -1,6 +1,6 @@
 # 复习笔记 - 正确答案汇总
 
-**最后更新**: 2025-01-07
+**最后更新**: 2025-01-08
 
 这个文件记录所有测试中的正确答案，方便复习。
 
@@ -1168,3 +1168,314 @@ public class WechatPayService implements PayService { }
 ```
 
 **口诀**：先过滤定性，出去就不乱了。A 不能自己给自己定性，得依赖第三方（工厂）。
+
+
+---
+
+## 二十八、反射深入理解
+
+### 1. 反射的历史
+- **起源**：1982 年 Brian Cantwell Smith 博士论文
+- **早期实现**：Smalltalk（1970-80年代）
+- **Java**：1996 年借鉴实现
+
+### 2. 反射不是 Java 独有
+| 语言 | 反射机制 |
+|------|---------|
+| Python | `getattr()`、`type()` |
+| C# | `System.Reflection` |
+| JavaScript | `typeof`、`Object.keys()` |
+| Ruby | 天生反射型语言 |
+
+### 3. 反射的六大应用场景
+
+| 场景 | 核心反射操作 | 用途 |
+|------|-------------|------|
+| IOC 容器 | `Class.forName()` + `newInstance()` + `field.set()` | 创建 Bean、注入依赖 |
+| AOP 代理 | `Method.invoke()` | 方法增强 |
+| ORM 框架 | `field.set()` | 结果集映射 |
+| JSON 序列化 | `field.get()` / `field.set()` | 对象与 JSON 互转 |
+| 单元测试 | `setAccessible(true)` | 访问私有成员 |
+| RPC 框架 | `method.invoke()` | 远程方法调用 |
+
+### 4. 反射的视角转换
+
+**面向对象 vs 反射**：
+```java
+// 面向对象：对象.属性 = 值
+user.name = "张三";
+
+// 反射：属性.set(对象, 值)
+field.set(user, "张三");
+```
+
+**理解**：Field 是"字段的模板"，不属于任何具体对象，操作时要指定"主人"。
+
+### 5. 元编程思想
+- **面向对象**：在程序里写逻辑
+- **反射/元编程**：在程序外操控程序
+- 框架用反射"俯视"代码，动态操作它
+
+### 6. 业务代码用反射的场景
+- 加密/解密敏感字段（配合注解）
+- 鉴权过滤字段
+- 通用对象拷贝
+- 根据配置动态调用
+
+**原则**：能不用就不用（性能差、绕过编译检查、可读性差）
+
+---
+
+## 二十九、单元测试
+
+### 1. 断言的本质
+断言 = "我断定结果应该是这样"
+
+```java
+// 没有断言：人眼看
+System.out.println(result);
+
+// 有断言：自动判断
+assertEquals(3, result);  // 不是 3 就报错
+```
+
+### 2. 断言写法
+```java
+assertEquals(期望值, 实际值);  // 期望值在前！
+```
+
+**为什么期望值在前**：报错信息更清晰
+```
+Expected: 3
+Actual: 5
+```
+
+### 3. 常用断言
+| 断言 | 用途 |
+|------|------|
+| `assertEquals(a, b)` | 相等 |
+| `assertNotEquals(a, b)` | 不相等 |
+| `assertTrue(condition)` | 为真 |
+| `assertFalse(condition)` | 为假 |
+| `assertNull(obj)` | 为空 |
+| `assertNotNull(obj)` | 不为空 |
+| `assertThrows(Exception.class, () -> ...)` | 应该抛异常 |
+
+### 4. 单测为什么难写
+
+| 原因 | 说明 |
+|------|------|
+| 依赖太多 | 要 Mock 所有依赖，设置返回值 |
+| 边界情况 | 一个 if 要写多个测试用例 |
+| 外部资源 | 数据库、网络、文件要特殊处理 |
+| 代码耦合 | 直接 new、直接调外部接口，没法 Mock |
+
+**结论**：单测难写 = 业务代码设计有问题。好的代码容易测。
+
+
+---
+
+## 三十、OpenAPI Specification
+
+### 1. OpenAPI 是什么
+用标准格式（YAML/JSON）描述 API 接口的规范，以前叫 Swagger Specification。
+
+### 2. 解决的问题
+- 前后端对接时接口文档不同步
+- 手写文档维护成本高，容易过时
+- 接口变更容易遗漏通知
+
+### 3. OpenAPI 能做什么
+
+| 功能 | 说明 |
+|------|------|
+| 自动生成文档 | Swagger UI 可视化接口文档 |
+| 自动生成代码 | 前端 SDK、后端 Controller 骨架 |
+| 接口测试 | 直接在文档页面调用接口 |
+| Mock 服务 | 前端不用等后端，先用假数据开发 |
+| 契约校验 | 检查接口是否符合规范 |
+
+### 4. Java 集成（SpringDoc）
+
+**添加依赖**：
+```xml
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>2.3.0</version>
+</dependency>
+```
+
+**常用注解**：
+| 注解 | 用途 |
+|------|------|
+| `@Tag` | 接口分组 |
+| `@Operation` | 描述接口 |
+| `@Parameter` | 描述参数 |
+| `@Schema` | 描述实体类字段 |
+
+**访问文档**：
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
+### 5. 两种模式
+- **代码优先**：先写代码，自动生成文档（常用）
+- **契约优先**：先写 OpenAPI 文档，生成代码骨架
+
+---
+
+## 三十一、RPC 框架
+
+### 1. RPC 是什么
+RPC = Remote Procedure Call（远程过程调用）
+
+**核心思想**：像调用本地方法一样，调用远程服务器上的方法。
+
+### 2. RPC 原理
+
+```
+客户端调用 
+    ↓
+动态代理拦截
+    ↓
+序列化：{类名, 方法名, 参数}
+    ↓
+网络传输（TCP/HTTP）
+    ↓
+服务端接收
+    ↓
+反序列化
+    ↓
+反射调用真实方法
+    ↓
+返回结果 → 序列化 → 网络传输 → 客户端反序列化
+```
+
+**核心技术**：动态代理 + 网络通信 + 序列化
+
+### 3. RPC vs HTTP
+
+| 对比 | RPC | HTTP/REST |
+|------|-----|-----------|
+| 调用方式 | 像本地方法 | 手动发请求 |
+| 协议 | 自定义（如 Dubbo）或 gRPC | HTTP |
+| 序列化 | 二进制（快） | JSON（慢） |
+| 性能 | 高 | 相对低 |
+| 学习成本 | 高 | 低 |
+
+### 4. 常见 RPC 框架
+
+| 框架 | 特点 |
+|------|------|
+| Dubbo | 阿里开源，Java 生态，高性能 |
+| gRPC | Google 开源，跨语言，基于 HTTP/2 |
+| Thrift | Facebook 开源，跨语言 |
+| Feign | Spring Cloud，基于 HTTP |
+
+---
+
+## 三十二、Dubbo vs Feign
+
+### 1. 核心区别
+
+| 对比 | Dubbo | Feign |
+|------|-------|-------|
+| **定位** | RPC 框架 | HTTP 客户端 |
+| **协议** | Dubbo 协议（TCP） | HTTP/REST |
+| **序列化** | Hessian/Protobuf（二进制） | JSON |
+| **性能** | 高 | 相对低 |
+| **生态** | 阿里系，独立生态 | Spring Cloud 全家桶 |
+| **学习成本** | 高 | 低 |
+| **跨语言** | 支持但麻烦 | 天然支持（HTTP） |
+
+### 2. Dubbo 特点
+
+**优势**：
+- 性能高（二进制序列化 + TCP 长连接）
+- 功能强大（负载均衡、服务降级、流量控制）
+- 服务治理完善（监控、路由、版本管理）
+
+**劣势**：
+- 重（需要注册中心：Nacos/Zookeeper）
+- 学习成本高（概念多，配置复杂）
+- 跨语言麻烦（主要是 Java 生态）
+
+**使用场景**：
+- 内部微服务，性能要求高
+- 服务数量多，需要完善的治理能力
+- 纯 Java 技术栈
+
+**代码示例**：
+```java
+// 提供者
+@DubboService(version = "1.0.0", timeout = 3000)
+public class UserServiceImpl implements UserService { }
+
+// 消费者
+@DubboReference(version = "1.0.0")
+private UserService userService;
+```
+
+### 3. Feign 特点
+
+**优势**：
+- 简单（声明式调用，写个接口就行）
+- Spring Cloud 集成好（和 Eureka、Ribbon、Hystrix 无缝集成）
+- 跨语言友好（基于 HTTP，任何语言都能调）
+- 调试方便（抓包就能看到请求内容）
+
+**劣势**：
+- 性能低（JSON 序列化 + HTTP 短连接）
+- 功能简单（主要靠 Spring Cloud 其他组件补充）
+
+**使用场景**：
+- Spring Cloud 微服务
+- 对性能要求不极致
+- 需要跨语言调用
+- 快速开发，简单场景
+
+**代码示例**：
+```java
+@FeignClient(name = "user-service")
+public interface UserClient {
+    @GetMapping("/users/{id}")
+    User getById(@PathVariable Long id);
+}
+```
+
+### 4. 性能对比
+
+| 框架 | 序列化 | 传输 | QPS |
+|------|--------|------|-----|
+| Dubbo | Hessian 二进制 | TCP 长连接 | 单机几万 |
+| Feign | JSON 文本 | HTTP 短连接 | 单机几千 |
+
+**差距**：Dubbo 比 Feign 快 **2-5 倍**
+
+### 5. 技术选型建议
+
+**选 Dubbo**：
+- 内部系统，性能要求高
+- 服务调用频繁（每秒上千次）
+- 需要复杂的服务治理
+- 团队熟悉 Dubbo
+
+**选 Feign**：
+- Spring Cloud 技术栈
+- 对外提供 API（HTTP 更通用）
+- 快速开发，简单场景
+- 性能够用就行
+
+### 6. 混合使用
+
+很多公司：
+- **内部核心服务**：Dubbo（高性能）
+- **边缘服务/网关**：Feign/HTTP（对外接口）
+
+```
+前端 → API 网关(HTTP) → 订单服务(Feign) → 用户服务(Dubbo) → 数据库
+```
+
+**一句话总结**：
+- Dubbo = 高性能 RPC，适合内部调用
+- Feign = 简单 HTTP 客户端，适合快速开发

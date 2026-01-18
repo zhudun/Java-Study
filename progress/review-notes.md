@@ -2064,3 +2064,190 @@ new ThreadPoolExecutor(
 **队列大小**：不要用无界队列（会 OOM），建议有界队列
 
 **拒绝策略**：根据业务选择，重要任务用 CallerRunsPolicy
+
+
+---
+
+## 四十五、@Async 异步编程
+
+### 1. 使用场景
+
+| 场景 | 例子 |
+|------|------|
+| 发送通知 | 邮件、短信、推送 |
+| 日志记录 | 操作日志、审计日志 |
+| 数据统计 | 访问量、用户行为 |
+| 文件处理 | 图片压缩、视频转码 |
+| 第三方调用 | 不紧急的接口调用 |
+
+### 2. 配置方式
+
+**全局配置**：
+```java
+@Configuration
+@EnableAsync
+public class AsyncConfig implements AsyncConfigurer {
+    @Override
+    public Executor getAsyncExecutor() {
+        return new ThreadPoolExecutor(...);
+    }
+}
+```
+
+**指定线程池**：
+```java
+@Async("emailExecutor")
+public void sendEmail() { }
+```
+
+### 3. 异常处理
+
+**@ControllerAdvice 捕获不到异步异常！**
+
+**解决方案**：
+1. 方法内 try-catch
+2. AsyncUncaughtExceptionHandler
+
+```java
+@Override
+public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
+    return (ex, method, params) -> {
+        log.error("异步任务异常: {}", method.getName(), ex);
+    };
+}
+```
+
+### 4. 注意事项
+
+- 必须加 @EnableAsync
+- 不能在同一个类内部调用（代理失效）
+- 异常不会抛到主线程
+
+
+---
+
+## 四十六、同步 vs 异步
+
+### 1. 核心区别
+
+| 对比 | 同步 | 异步 |
+|------|------|------|
+| 执行方式 | 顺序执行，等待结果 | 提交后立刻返回 |
+| 阻塞 | 阻塞主线程 | 不阻塞 |
+| 响应速度 | 慢 | 快 |
+| 复杂度 | 简单 | 复杂 |
+
+### 2. 应用场景
+
+**同步**：核心业务逻辑、需要返回值、事务操作
+**异步**：发送通知、日志记录、数据统计、耗时操作
+
+### 3. 选择原则
+
+**一句话**：核心业务同步，辅助功能异步
+
+
+---
+
+## 四十七、回调接口
+
+### 1. 定义
+
+把一段代码传给别人，别人在合适时调用它。
+
+**核心思想**："别调我，我调你"
+
+### 2. 示例
+
+```java
+interface Callback {
+    void onSuccess(String result);
+    void onError(Exception e);
+}
+
+public void asyncTask(Callback callback) {
+    new Thread(() -> {
+        try {
+            String result = doSomething();
+            callback.onSuccess(result);
+        } catch (Exception e) {
+            callback.onError(e);
+        }
+    }).start();
+}
+
+// 使用
+asyncTask(new Callback() {
+    public void onSuccess(String result) {
+        System.out.println("成功: " + result);
+    }
+    public void onError(Exception e) {
+        System.out.println("失败: " + e);
+    }
+});
+```
+
+### 3. 实际场景
+
+- 支付回调：支付宝调用你的接口通知支付结果
+- 第三方接口回调：上传文件后通知处理结果
+- 异步任务通知：任务完成后回调
+
+
+---
+
+## 四十八、分布式事务
+
+### 1. 问题场景
+
+```
+下单流程：
+订单服务（扣库存）→ 支付服务（扣余额）→ 积分服务（加积分）
+```
+
+**问题**：扣余额成功，加积分失败，怎么保证一致性？
+
+### 2. 解决方案对比
+
+| 方案 | 特点 | 一致性 | 性能 |
+|------|------|--------|------|
+| 2PC | 强一致，阻塞 | 强 | 差 |
+| TCC | 手动补偿 | 最终 | 中 |
+| Saga | 长事务，事件驱动 | 最终 | 好 |
+| 本地消息表 | 消息保证 | 最终 | 好 |
+| MQ 事务消息 | RocketMQ 支持 | 最终 | 好 |
+
+### 3. TCC 模式（最常用）
+
+**三个阶段**：
+- **Try**：预留资源（冻结库存、冻结余额）
+- **Confirm**：确认提交（真正扣除）
+- **Cancel**：回滚（释放冻结）
+
+```java
+// Try：冻结库存
+public void tryReduceStock(Long productId, int count) {
+    // 库存 - count，冻结库存 + count
+}
+
+// Confirm：确认扣除
+public void confirmReduceStock(Long productId, int count) {
+    // 冻结库存 - count
+}
+
+// Cancel：回滚
+public void cancelReduceStock(Long productId, int count) {
+    // 库存 + count，冻结库存 - count
+}
+```
+
+### 4. Seata 框架
+
+阿里开源的分布式事务框架
+
+| 模式 | 特点 |
+|------|------|
+| **AT** | 自动补偿，侵入性低（最常用） |
+| **TCC** | 手动写 Try/Confirm/Cancel |
+| **Saga** | 长事务 |
+| **XA** | 强一致，性能差 |

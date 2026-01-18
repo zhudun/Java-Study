@@ -646,6 +646,7 @@
 | 2025-01-10 | Redisson看门狗 + volatile/CAS + QPS + JVM内存 + GC | 60分钟 | 看门狗原理、volatile原子性、CAS/ABA、原子类、QPS/TPS、内存区域、GC算法与收集器 |
 | 2025-01-10 | 联合索引 + explain type + Feign + Gateway | 45分钟 | 最左前缀、type字段排序、Feign原理、Gateway三概念、限流方式、Seata |
 | 2025-01-15 | AOP五种通知 + 线程池七参数 | 15分钟 | AOP通知类型、@After vs @AfterReturning、@Around特点、线程池执行流程 |
+| 2025-01-15 | 线程池深入 + @Async + 同步异步 + 回调 + 分布式事务 | 90分钟 | 线程池配置、Executors风险、@Async异常处理、回调原理、TCC模式 |
 
 ---
 

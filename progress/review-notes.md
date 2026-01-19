@@ -2251,3 +2251,622 @@ public void cancelReduceStock(Long productId, int count) {
 | **TCC** | 手动写 Try/Confirm/Cancel |
 | **Saga** | 长事务 |
 | **XA** | 强一致，性能差 |
+
+
+---
+
+## 分布式事务
+
+### ACID 特性详解
+
+| 特性 | 核心思想 | 实现机制 | 例子 |
+|------|---------|---------|------|
+| **A - 原子性** | 要么全做，要么全不做 | undo log（回滚日志） | 转账两步操作，任何一步失败都回滚 |
+| **C - 一致性** | 数据从一个合法状态到另一个合法状态 | 约束一致性 + 业务一致性 | 转账前后总金额不变、余额不能为负 |
+| **I - 隔离性** | 并发事务互不干扰 | 隔离级别 + MVCC + 锁 | 防止脏读、不可重复读、幻读 |
+| **D - 持久性** | 提交后，数据永久保存 | redo log（重做日志） | 断电后用 redo log 恢复数据 |
+
+**记忆口诀：**
+- **原子性** = 做不做的问题（全做或全不做）
+- **一致性** = 对不对的问题（数据合不合理）
+- **隔离性** = 干扰不干扰的问题（并发事务影响）
+- **持久性** = 丢不丢的问题（提交后不丢失）
+
+---
+
+### 三种读问题对比
+
+| 问题 | 定义 | 例子 | 前提 |
+|------|------|------|------|
+| **脏读** | 读到未提交的数据 | 事务A读到事务B未提交的修改，B回滚了 | 同一事务内 |
+| **不可重复读** | 同一行数据两次读不一样 | 事务A两次读张三余额，中间被事务B修改了 | 同一事务内 |
+| **幻读** | 同一范围行数变化 | 事务A两次查询余额>500的账户，行数变了 | 同一事务内 |
+
+**关键理解：** 三种读问题都是在**一个事务内**，受**其他并发事务**影响。
+
+---
+
+### MySQL 隔离级别
+
+| 隔离级别 | 脏读 | 不可重复读 | 幻读 | 性能 |
+|---------|------|-----------|------|------|
+| Read Uncommitted | ❌ | ❌ | ❌ | 最高 |
+| Read Committed | ✅ | ❌ | ❌ | 高 |
+| Repeatable Read | ✅ | ✅ | ⚠️ 部分防止 | 中 |
+| Serializable | ✅ | ✅ | ✅ | 最低 |
+
+**MySQL 默认：Repeatable Read**
+
+**记忆技巧：** 级别越高，防护越强，性能越差。
+
+---
+
+### 持久性实现原理
+
+**问题：** 如何做到既快又安全？
+
+**方案A：立即写磁盘**
+- 优点：数据安全
+- 缺点：太慢（随机写，几十毫秒）
+
+**方案B：先写内存**
+- 优点：快
+- 缺点：断电丢失
+
+**MySQL 的巧妙方案：redo log**
+
+```
+1. 写 redo log 到磁盘（顺序写，快）
+2. 写数据到内存
+3. 返回"提交成功"
+4. 后台慢慢把内存刷到数据文件
+
+断电后：
+- redo log 在磁盘上
+- 重启时读取 redo log 恢复数据
+```
+
+**关键：** redo log 是顺序写，比数据文件的随机写快得多！
+
+---
+
+### 事务传播机制
+
+**核心问题：** 一个有事务的方法调用另一个有事务的方法，事务怎么处理？
+
+| 传播机制 | 行为 | 使用场景 |
+|---------|------|---------|
+| **REQUIRED**（默认） | 加入外层事务 | 普通业务，保持一致性 |
+| **REQUIRES_NEW** | 创建新事务 | 日志记录、积分赠送（失败不影响主业务） |
+| **NESTED** | 嵌套事务 | 子事务可以独立回滚 |
+
+**为什么考得少？**
+- 隔离级别：数据库层面，所有数据库都有
+- 传播机制：Spring 框架特有，大部分场景用默认的 REQUIRED 就够了
+
+---
+
+### TCC 模式详解
+
+**TCC = Try - Confirm - Cancel**
+
+#### 三阶段对比
+
+| 阶段 | 作用 | 库存服务 | 账户服务 |
+|------|------|---------|---------|
+| **Try** | 预留资源 | `available -= 10; frozen += 10;` | `frozen += 100;` |
+| **Confirm** | 确认执行 | `frozen -= 10;` | `balance -= 100; frozen -= 100;` |
+| **Cancel** | 回滚 | `available += 10; frozen -= 10;` | `frozen -= 100;` |
+
+**关键设计：**
+- ✅ Try 阶段就要真正扣 `available`（防超卖）
+- ✅ Confirm 阶段只是释放 `frozen` 标记
+- ✅ Confirm 和 Cancel 互斥，只会执行其中一个
+
+---
+
+#### TCC 三大问题及解决方案
+
+| 问题 | 场景 | 后果 | 解决方案 |
+|------|------|------|---------|
+| **幂等性** | 网络超时导致重试 | 重复扣款 | 事务记录表 + 状态检查 |
+| **空回滚** | Try 没执行，Cancel 来了 | Cancel 操作不存在的数据 | Cancel 检查 Try 状态 |
+| **悬挂** | Cancel 先到，Try 后到 | 资源永远被冻结 | Try 检查 Cancel 状态 |
+
+**核心解决方案：事务记录表**
+
+```sql
+CREATE TABLE tcc_transaction (
+    tx_id VARCHAR(64) PRIMARY KEY,    -- 全局事务ID
+    status VARCHAR(20),                -- TRY/CONFIRM/CANCEL
+    amount INT,                        -- 金额
+    create_time DATETIME
+);
+```
+
+---
+
+#### 幂等性解决方案
+
+```java
+@Transactional
+public void confirmDeduct(String txId) {
+    // 1. 检查是否已经执行过
+    TccTransaction record = transactionMapper.selectById(txId);
+    if (record != null && "CONFIRM".equals(record.getStatus())) {
+        return;  // 幂等返回
+    }
+    
+    // 2. 执行业务逻辑
+    account.balance -= 100;
+    account.frozen -= 100;
+    
+    // 3. 记录状态
+    record.setStatus("CONFIRM");
+    transactionMapper.update(record);
+}
+```
+
+**关键：** 整个过程在一个本地事务里，保证原子性。
+
+---
+
+#### 空回滚解决方案
+
+```java
+@Transactional
+public void cancelDeduct(String txId) {
+    // 1. 检查 Try 是否执行过
+    TccTransaction record = transactionMapper.selectById(txId);
+    
+    // 2. 空回滚：Try 没执行
+    if (record == null) {
+        // 记录 Cancel 状态，防止 Try 延迟到达
+        record = new TccTransaction();
+        record.setTxId(txId);
+        record.setStatus("CANCEL");
+        transactionMapper.insert(record);
+        return;  // 直接返回，不做任何操作
+    }
+    
+    // 3. 正常回滚
+    account.frozen -= record.getAmount();
+    record.setStatus("CANCEL");
+}
+```
+
+**关键：** 记录 Cancel 状态，防止 Try 延迟到达。
+
+---
+
+#### 悬挂解决方案
+
+```java
+@Transactional
+public void tryDeduct(String txId, int amount) {
+    // 1. 防悬挂：检查是否已经 Cancel
+    TccTransaction record = transactionMapper.selectById(txId);
+    if (record != null && "CANCEL".equals(record.getStatus())) {
+        throw new RuntimeException("事务已取消，拒绝执行");
+    }
+    
+    // 2. 幂等检查
+    if (record != null && "TRY".equals(record.getStatus())) {
+        return;
+    }
+    
+    // 3. 业务逻辑
+    account.frozen += amount;
+    
+    // 4. 记录状态
+    record.setStatus("TRY");
+}
+```
+
+**关键：** Try 执行前检查是否已经 Cancel。
+
+---
+
+#### TCC 状态机
+
+```
+初始状态
+   ↓
+[TRY] ← 预留资源
+   ↓
+   ├─→ [CONFIRM] ← 所有 Try 成功（不可逆）
+   └─→ [CANCEL] ← 任何 Try 失败（不可逆）
+```
+
+**关键规则：**
+- TRY → CONFIRM（不可逆）
+- TRY → CANCEL（不可逆）
+- **CONFIRM 和 CANCEL 互斥**
+
+---
+
+### 为什么 Try 阶段要真正扣库存？
+
+**错误设计（Confirm 才扣库存）：**
+
+```
+1. 用户A Try：available 还是 100，frozen += 10
+2. 用户B Try：available 还是 100，frozen += 95
+3. 用户A Confirm：available = 90
+4. 用户B Confirm：available = -5 ❌ 超卖了！
+```
+
+**正确设计（Try 阶段就扣库存）：**
+
+```
+1. 用户A Try：available = 90, frozen = 10
+2. 用户B Try：available 只有 90，失败！
+3. 用户A Confirm：available = 90（不变）, frozen = 0
+✅ 不会超卖！
+```
+
+**记忆口诀：** Try 阶段预留资源，Confirm 阶段只是"确认"，不是"执行"。
+
+---
+
+### TCC vs 其他分布式事务方案
+
+| 方案 | 一致性 | 性能 | 复杂度 | 适用场景 |
+|------|--------|------|--------|---------|
+| **TCC** | 强一致 | 高 | 高（需要写3个方法） | 核心业务（订单、支付） |
+| **2PC** | 强一致 | 低 | 中 | 传统分布式数据库 |
+| **SAGA** | 最终一致 | 高 | 中 | 长事务 |
+| **本地消息表** | 最终一致 | 高 | 低 | 非核心业务 |
+| **MQ 事务消息** | 最终一致 | 高 | 低 | 异步场景 |
+
+**选择建议：**
+- 核心业务（订单、支付）→ TCC
+- 非核心业务（积分、通知）→ 最终一致性方案
+- 长事务（跨多个服务）→ SAGA
+
+---
+
+### 常见面试题
+
+**Q1: ACID 中的一致性和原子性有什么区别？**
+
+A: 
+- **原子性**：关注操作是否完整（要么全做，要么全不做）
+- **一致性**：关注数据是否正确（符合约束和业务规则）
+- 例子：转账操作，原子性保证两步都执行或都不执行，一致性保证总金额不变
+
+**Q2: 为什么持久性要单独列出来？**
+
+A: 持久性不是理所当然的，是数据库通过 redo log 精心设计的结果。早期数据库面临"立即写磁盘（慢）vs 先写内存（不安全）"的矛盾，redo log 通过顺序写解决了这个问题。
+
+**Q3: MySQL 默认隔离级别是什么？能防止哪些问题？**
+
+A: Repeatable Read（可重复读），能防止脏读和不可重复读，部分防止幻读（通过 MVCC + 间隙锁）。
+
+**Q4: TCC 的三大问题是什么？如何解决？**
+
+A: 
+1. **幂等性**：网络超时导致重试 → 事务记录表 + 状态检查
+2. **空回滚**：Try 没执行，Cancel 来了 → Cancel 检查 Try 状态
+3. **悬挂**：Cancel 先到，Try 后到 → Try 检查 Cancel 状态
+
+**Q5: 为什么 Try 阶段要真正扣库存，而不是 Confirm 阶段才扣？**
+
+A: 如果 Confirm 才扣库存，会导致超卖。因为多个 Try 都看到相同的库存数量，都认为有货，但 Confirm 时库存不够了。Try 阶段就扣库存，可以防止超卖。
+
+**Q6: Confirm 和 Cancel 会同时执行吗？**
+
+A: 不会。Confirm 和 Cancel 是互斥的，只会执行其中一个。所有 Try 成功 → 执行 Confirm；任何 Try 失败 → 执行 Cancel。
+
+**Q7: 如果 Confirm 执行到一半失败了怎么办？**
+
+A: 重试 Confirm，不会调用 Cancel。因为 Try 阶段已经成功了，资源已经预留了，只是 Confirm 执行失败，重试就好。幂等性保证重试不会重复执行。
+
+
+---
+
+## 分布式事务 - 最终一致性方案
+
+### 方案选择对比
+
+| 场景类型 | 推荐方案 | 原因 | 例子 |
+|---------|---------|------|------|
+| **核心资源** | TCC、2PC | 必须强一致 | 订单+扣款+扣库存、转账 |
+| **非核心业务** | 本地消息表、MQ | 可以最终一致 | 积分、短信、邮件、统计 |
+
+**记忆口诀：** 金额的都得强一致性，不重要的最终一致接口。
+
+---
+
+### 为什么不能在事务里直接调用远程服务？
+
+**核心原因：会拖垮主流程！**
+
+#### 问题1：性能问题
+```java
+@Transactional
+public void createOrder(Order order) {
+    orderMapper.insert(order);              // 10ms
+    pointService.addPoint(...);             // 500ms（网络调用）
+    notificationService.sendSMS(...);       // 300ms
+    
+    // 总耗时：810ms
+    // 用户等了快 1 秒才看到"下单成功"！❌
+}
+```
+
+#### 问题2：可靠性问题
+```java
+@Transactional
+public void createOrder(Order order) {
+    orderMapper.insert(order);           // ✅ 成功
+    pointService.addPoint(...);          // ❌ 积分服务宕机
+    
+    // 整个事务回滚，订单也没了！❌
+}
+```
+
+#### 问题3：事务超时
+```java
+@Transactional(timeout = 30)
+public void createOrder(Order order) {
+    orderMapper.insert(order);
+    pointService.addPoint(...);  // 网络很慢，30 秒没响应
+    
+    // 事务超时，回滚，订单也没了！❌
+}
+```
+
+---
+
+### 方案1：本地消息表
+
+#### 核心思想
+**把"发送消息"和"业务操作"放在同一个本地事务里！**
+
+#### 实现步骤
+
+**步骤1：创建消息表**
+```sql
+CREATE TABLE local_message (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    message_id VARCHAR(64) UNIQUE,
+    content TEXT,                       -- 消息内容（JSON）
+    status VARCHAR(20),                 -- PENDING/SUCCESS/FAILED
+    retry_count INT DEFAULT 0,
+    create_time DATETIME
+);
+```
+
+**步骤2：业务操作 + 插入消息（同一事务）**
+```java
+@Transactional
+public void createOrder(Order order) {
+    // 1. 插入订单
+    orderMapper.insert(order);
+    
+    // 2. 插入消息
+    LocalMessage message = new LocalMessage();
+    message.setContent(JSON.toJSONString(Map.of(
+        "userId", order.getUserId(),
+        "points", 100
+    )));
+    message.setStatus("PENDING");
+    messageMapper.insert(message);
+    
+    // 3. 提交事务（订单和消息要么都成功，要么都失败）
+}
+```
+
+**步骤3：后台定时任务扫描**
+```java
+@Scheduled(fixedDelay = 5000)  // 每 5 秒
+public void sendMessage() {
+    List<LocalMessage> messages = messageMapper.selectPending();
+    
+    for (LocalMessage msg : messages) {
+        try {
+            // 调用积分服务
+            pointService.addPoint(...);
+            msg.setStatus("SUCCESS");
+        } catch (Exception e) {
+            msg.setRetryCount(msg.getRetryCount() + 1);
+            if (msg.getRetryCount() > 10) {
+                msg.setStatus("FAILED");  // 告警
+            }
+        }
+        messageMapper.update(msg);
+    }
+}
+```
+
+#### 流程图
+```
+1. 开启事务
+2. 插入订单 ✅
+3. 插入消息（PENDING）✅
+4. 提交事务
+5. 立即返回"下单成功"（15ms）
+6. 后台定时任务扫描消息
+7. 调用积分服务
+   - 成功 → 标记 SUCCESS
+   - 失败 → 重试（最多 10 次）
+```
+
+---
+
+### 方案2：MQ 事务消息（RocketMQ）
+
+#### 核心思想
+**MQ 帮你保证：发送消息和本地事务的一致性！**
+
+#### 关键机制
+
+**1. 半消息（PREPARE）**
+- 消息发送到 MQ，但不投递给消费者
+- 等待本地事务执行结果
+
+**2. 事务回查**
+- 如果 MQ 没收到 COMMIT/ROLLBACK
+- MQ 主动回查："本地事务到底成功了吗？"
+
+#### 实现步骤
+
+**步骤1：发送事务消息**
+```java
+@Service
+public class OrderService {
+    @Autowired
+    private TransactionMQProducer producer;
+    
+    public void createOrder(Order order) {
+        Message message = new Message(
+            "order-topic",
+            JSON.toJSONString(order).getBytes()
+        );
+        producer.sendMessageInTransaction(message, order);
+    }
+}
+```
+
+**步骤2：实现事务监听器**
+```java
+@Component
+public class OrderTransactionListener implements TransactionListener {
+    
+    // 执行本地事务
+    @Override
+    public LocalTransactionState executeLocalTransaction(Message msg, Object arg) {
+        try {
+            Order order = (Order) arg;
+            orderMapper.insert(order);  // 插入订单
+            return LocalTransactionState.COMMIT_MESSAGE;  // 提交消息
+        } catch (Exception e) {
+            return LocalTransactionState.ROLLBACK_MESSAGE;  // 回滚消息
+        }
+    }
+    
+    // 事务回查
+    @Override
+    public LocalTransactionState checkLocalTransaction(MessageExt msg) {
+        // 查询订单是否存在
+        Order order = orderMapper.selectById(orderId);
+        if (order != null) {
+            return LocalTransactionState.COMMIT_MESSAGE;  // 订单存在，提交
+        } else {
+            return LocalTransactionState.ROLLBACK_MESSAGE;  // 订单不存在，回滚
+        }
+    }
+}
+```
+
+**步骤3：消费者处理消息**
+```java
+@Component
+@RocketMQMessageListener(topic = "order-topic", consumerGroup = "point-consumer")
+public class PointConsumer implements RocketMQListener<String> {
+    
+    @Override
+    public void onMessage(String message) {
+        Order order = JSON.parseObject(message, Order.class);
+        pointService.addPoint(order.getUserId(), 100);  // 增加积分
+    }
+}
+```
+
+#### 流程图
+```
+1. 发送半消息（PREPARE）→ RocketMQ
+2. RocketMQ 存储半消息（不投递）
+3. 执行本地事务（插入订单）
+   - 成功 → 返回 COMMIT
+   - 失败 → 返回 ROLLBACK
+4. RocketMQ 收到 COMMIT → 投递消息给消费者
+
+如果网络故障，RocketMQ 没收到响应：
+5. RocketMQ 回查事务状态
+6. 查询订单是否存在
+   - 存在 → 返回 COMMIT
+   - 不存在 → 返回 ROLLBACK
+```
+
+---
+
+### 本地消息表 vs MQ 事务消息
+
+| 对比项 | 本地消息表 | MQ 事务消息 |
+|--------|-----------|------------|
+| **实现复杂度** | 简单（自己写定时任务） | 中等（需要 MQ 支持） |
+| **可靠性** | 中（依赖定时任务） | 高（MQ 保证） |
+| **性能** | 中（定时扫描有延迟） | 高（实时投递） |
+| **消息顺序** | 不保证 | 可以保证（顺序消息） |
+| **适用场景** | 小项目、简单场景 | 大项目、高并发场景 |
+
+**选择建议：**
+- 小项目、学习阶段 → 本地消息表
+- 生产环境、高并发 → MQ 事务消息
+
+---
+
+### 直接调用 vs 本地消息表 vs MQ 事务消息
+
+| 对比项 | 直接调用 | 本地消息表 | MQ 事务消息 |
+|--------|---------|-----------|------------|
+| **响应速度** | 慢（1秒+） | 快（15ms） | 快（20ms） |
+| **可靠性** | 差 | 好 | 最好 |
+| **耦合度** | 高 | 低 | 低 |
+| **一致性** | 强一致 | 最终一致 | 最终一致 |
+| **实现复杂度** | 简单 | 中等 | 中等 |
+
+---
+
+### 常见面试题
+
+**Q1: 为什么不能在事务里直接调用远程服务？**
+
+A: 三个原因：
+1. **性能问题**：网络调用慢，拖垮主流程，用户体验差
+2. **可靠性问题**：远程服务失败导致整个事务回滚，订单也没了
+3. **事务超时**：网络延迟可能导致事务超时回滚
+
+**Q2: 本地消息表的核心思想是什么？**
+
+A: 把"发送消息"和"业务操作"放在同一个本地事务里，保证原子性。后台定时任务扫描消息表，异步调用远程服务，失败了可以重试。
+
+**Q3: RocketMQ 事务消息的半消息是什么？**
+
+A: 半消息是指消息已经发送到 MQ，但不投递给消费者，等待本地事务执行结果。如果本地事务成功，提交消息；如果失败，回滚消息。
+
+**Q4: RocketMQ 的事务回查机制是什么？**
+
+A: 如果 MQ 没收到 COMMIT/ROLLBACK（网络故障），MQ 会主动回查本地事务状态。通过查询数据库判断本地事务是否成功，然后决定提交还是回滚消息。
+
+**Q5: 本地消息表 vs MQ 事务消息，如何选择？**
+
+A: 
+- 小项目、学习阶段 → 本地消息表（简单）
+- 生产环境、高并发 → MQ 事务消息（可靠、高性能）
+
+**Q6: 哪些业务适合用最终一致性方案？**
+
+A: 不涉及核心资源的业务，失败了可以重试：
+- 下单 → 赠送积分
+- 下单 → 发送短信
+- 注册 → 发送欢迎邮件
+- 订单完成 → 更新统计数据
+
+**记忆口诀：** 金额的都得强一致性，不重要的最终一致接口。
+
+**Q7: 本地消息表如何保证消息不丢失？**
+
+A: 
+1. 消息和业务操作在同一个本地事务里，保证原子性
+2. 后台定时任务扫描 PENDING 消息，失败了重试
+3. 超过重试次数，标记 FAILED，发送告警，人工介入
+
+**Q8: RocketMQ 事务消息如何保证消息不丢失？**
+
+A:
+1. 半消息机制：消息先存储，等本地事务结果
+2. 事务回查：网络故障时 MQ 主动回查本地事务状态
+3. 消息持久化：MQ 保证消息不丢失

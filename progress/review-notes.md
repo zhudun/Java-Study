@@ -2870,3 +2870,641 @@ A:
 1. 半消息机制：消息先存储，等本地事务结果
 2. 事务回查：网络故障时 MQ 主动回查本地事务状态
 3. 消息持久化：MQ 保证消息不丢失
+
+
+---
+
+## SAGA 模式
+
+### 核心思想
+
+**不要 Try-Confirm-Cancel，直接执行 + 补偿！**
+
+```
+正向流程：
+1. 预订机票 ✅
+2. 预订酒店 ✅
+3. 预订租车 ✅
+4. 扣款 ❌ (失败了)
+
+补偿流程（反向执行）：
+5. 取消租车 ✅
+6. 取消酒店 ✅
+7. 取消机票 ✅
+```
+
+**关键：**
+- 每个服务只需要 2 个方法：**正向操作** + **补偿操作**
+- 不需要冻结资源，直接执行
+- 失败了就反向补偿
+
+---
+
+### TCC 在长事务场景的问题
+
+| 问题 | 描述 | 影响 |
+|------|------|------|
+| **资源锁定时间长** | Try 阶段冻结资源（机票、酒店、车辆） | 其他用户无法预订，性能下降 |
+| **第三方服务不支持** | 第三方 API 没有 try/confirm/cancel 方法 | 无法使用 TCC |
+| **开发成本高** | 每个服务 3 个方法 + 幂等性/空回滚/悬挂 | 开发和维护成本高 |
+
+---
+
+### SAGA vs TCC
+
+| 对比项 | TCC | SAGA |
+|--------|-----|------|
+| **操作方式** | Try-Confirm-Cancel（三阶段） | 直接执行 + 补偿（两阶段） |
+| **资源锁定** | Try 阶段冻结资源 | 不冻结，直接执行 |
+| **一致性** | 强一致性 | 最终一致性 |
+| **开发复杂度** | 高（每个服务 3 个方法） | 中（每个服务 2 个方法） |
+| **适用场景** | 短事务、核心业务 | 长事务、跨系统 |
+
+**记忆口诀：** 操作简单，最终一致性。
+
+---
+
+### SAGA 的两种实现方式
+
+#### 1. 协同式 SAGA（Choreography）
+
+**特点：** 每个服务自己决定下一步做什么（通过消息）
+
+```
+订单服务 → 发消息："订单创建成功"
+机票服务 → 监听消息 → 预订机票 → 发消息："机票预订成功"
+酒店服务 → 监听消息 → 预订酒店 → 发消息："酒店预订成功"
+支付服务 → 监听消息 → 扣款失败 → 发消息："支付失败"
+酒店服务 → 监听消息 → 取消酒店
+机票服务 → 监听消息 → 取消机票
+```
+
+**优点：** 去中心化，服务独立
+**缺点：** 流程分散，难以理解和维护
+
+---
+
+#### 2. 编排式 SAGA（Orchestration）- 推荐
+
+**特点：** 有一个协调者统一编排流程
+
+```java
+@Service
+public class TravelSagaOrchestrator {
+    
+    public void bookTravel(TravelOrder order) {
+        try {
+            // 正向操作
+            String flightId = flightService.bookFlight(order);
+            String hotelId = hotelService.bookHotel(order);
+            String carId = carService.bookCar(order);
+            paymentService.pay(order);
+            
+        } catch (Exception e) {
+            // 补偿操作（反向）
+            compensate(flightId, hotelId, carId);
+        }
+    }
+}
+```
+
+**优点：** 流程清晰，易于理解和维护
+**缺点：** 协调者是单点（可以通过集群解决）
+
+---
+
+### SAGA 状态机
+
+**为了更可靠，记录每一步的状态：**
+
+```sql
+CREATE TABLE saga_log (
+    id BIGINT PRIMARY KEY,
+    saga_id VARCHAR(64),
+    step_name VARCHAR(100),
+    status VARCHAR(20),  -- SUCCESS/FAILED/COMPENSATED
+    forward_data TEXT,
+    compensate_data TEXT,
+    create_time DATETIME
+);
+```
+
+```java
+public void bookTravel(TravelOrder order) {
+    String sagaId = UUID.randomUUID().toString();
+    
+    try {
+        // 步骤1
+        String flightId = flightService.bookFlight(order);
+        saveSagaLog(sagaId, "BOOK_FLIGHT", "SUCCESS", flightId);
+        
+        // 步骤2
+        String hotelId = hotelService.bookHotel(order);
+        saveSagaLog(sagaId, "BOOK_HOTEL", "SUCCESS", hotelId);
+        
+        // ...
+        
+    } catch (Exception e) {
+        // 查询已完成的步骤
+        List<SagaLog> logs = sagaLogMapper.selectBySagaId(sagaId);
+        
+        // 反向补偿
+        for (int i = logs.size() - 1; i >= 0; i--) {
+            compensateStep(logs.get(i));
+        }
+    }
+}
+```
+
+---
+
+### SAGA 的优势
+
+| 优势 | 说明 |
+|------|------|
+| **操作简单** | 每个服务 2 个方法（正向 + 补偿），开发成本降低 33% |
+| **不冻结资源** | 直接执行，不影响其他用户，性能好 |
+| **适合第三方服务** | 只需要 book/refund 方法，不需要改造成 TCC |
+
+---
+
+### SAGA 的缺点
+
+| 缺点 | 说明 | 解决方案 |
+|------|------|---------|
+| **最终一致性** | 中间状态可能不一致 | 适用于非核心业务 |
+| **补偿可能失败** | 网络故障、服务宕机 | 重试 + 人工介入 |
+| **补偿逻辑复杂** | 需要保证幂等性 | 记录补偿日志，检查状态 |
+
+---
+
+### SAGA 适用场景
+
+#### ✅ 适合 SAGA
+
+1. **长事务**
+   - 跨多个服务（3 个以上）
+   - 执行时间长（几秒到几分钟）
+   - 例子：旅游预订、订单履约
+
+2. **第三方服务**
+   - 无法改造成 TCC
+   - 只有正向操作 + 取消/退款
+   - 例子：支付宝、微信支付、第三方物流
+
+3. **非核心业务**
+   - 可以接受最终一致性
+   - 中间状态不一致也没关系
+   - 例子：积分兑换、优惠券发放
+
+---
+
+#### ❌ 不适合 SAGA
+
+1. **核心金额业务**
+   - 必须强一致性
+   - 不能出现中间状态
+   - 例子：转账、支付
+
+2. **短事务**
+   - 只涉及 1-2 个服务
+   - 执行时间很短（几十毫秒）
+   - 例子：简单的订单创建
+
+3. **无法补偿的操作**
+   - 发送短信（无法撤回）
+   - 发送邮件（无法撤回）
+   - 打印发票（无法撤回）
+
+---
+
+### 组合使用：SAGA + TCC
+
+**场景：** 旅游预订中，支付环节必须强一致
+
+**设计：支付 TCC，外层 SAGA**
+
+```
+外层 SAGA（长事务）：
+1. 预订机票 ✅ (SAGA 正向操作)
+2. 预订酒店 ✅ (SAGA 正向操作)
+3. 预订租车 ✅ (SAGA 正向操作)
+4. 支付 → 内层 TCC（强一致性）
+   ├─ Try: 冻结金额
+   ├─ Confirm: 真正扣款
+   └─ Cancel: 释放金额
+
+如果支付失败：
+5. TCC Cancel: 释放金额 ✅
+6. SAGA 补偿: 取消所有预订 ✅
+```
+
+**优势：**
+1. **支付强一致** - 不会出现"扣了钱但没预订成功"
+2. **预订灵活** - 不需要改造成 TCC，可以对接第三方 API
+3. **性能好** - TCC 只用在支付环节，金额冻结时间短
+
+---
+
+### 分布式事务方案总结
+
+| 方案 | 一致性 | 性能 | 复杂度 | 适用场景 |
+|------|--------|------|--------|---------|
+| **TCC** | 强一致 | 高 | 高 | 短事务、核心业务（订单+支付） |
+| **SAGA** | 最终一致 | 高 | 中 | 长事务、第三方服务（旅游预订） |
+| **本地消息表** | 最终一致 | 中 | 低 | 简单异步场景（积分、通知） |
+| **MQ 事务消息** | 最终一致 | 高 | 中 | 高并发异步场景（秒杀、大促） |
+
+---
+
+### 方案选择决策树
+
+```
+是否涉及金额/库存？
+├─ 是 → 是否短事务（1-3个服务）？
+│   ├─ 是 → TCC（强一致性）
+│   └─ 否 → SAGA（长事务）
+│
+└─ 否 → 是否高并发？
+    ├─ 是 → MQ 事务消息
+    └─ 否 → 本地消息表
+```
+
+---
+
+### 常见面试题
+
+**Q1: SAGA 和 TCC 的核心区别是什么？**
+
+A: 
+- **操作方式**：SAGA 是直接执行 + 补偿（2 个方法），TCC 是 Try-Confirm-Cancel（3 个方法）
+- **资源锁定**：SAGA 不冻结资源，TCC 在 Try 阶段冻结资源
+- **一致性**：SAGA 是最终一致性，TCC 是强一致性
+- **适用场景**：SAGA 适合长事务、第三方服务，TCC 适合短事务、核心业务
+
+**Q2: SAGA 适合什么场景？**
+
+A: 
+1. **长事务**：跨多个服务，执行时间长（旅游预订、订单履约）
+2. **第三方服务**：无法改造成 TCC，只有 book/refund 方法
+3. **非核心业务**：可以接受最终一致性，中间状态不一致也没关系
+
+**Q3: SAGA 的缺点是什么？如何解决？**
+
+A:
+1. **最终一致性**：中间状态可能不一致 → 适用于非核心业务
+2. **补偿可能失败**：网络故障、服务宕机 → 重试 + 人工介入
+3. **补偿逻辑复杂**：需要保证幂等性 → 记录补偿日志，检查状态
+
+**Q4: 如何组合使用 SAGA 和 TCC？**
+
+A: **支付 TCC，外层 SAGA**
+- 预订环节用 SAGA（直接执行，不冻结资源）
+- 支付环节用 TCC（强一致性，不能出错）
+- 如果支付失败，TCC Cancel 释放金额，SAGA 补偿取消所有预订
+
+**Q5: 编排式 SAGA 和协同式 SAGA 的区别？**
+
+A:
+- **编排式**：有一个协调者统一编排流程，流程清晰，易于维护（推荐）
+- **协同式**：每个服务自己决定下一步，通过消息通信，去中心化但难以维护
+
+**Q6: 下单+扣款+扣库存 用什么方案？**
+
+A: **TCC**
+- 涉及金额和库存，必须强一致
+- 短事务，只涉及 3 个服务
+- 不能出现"扣了钱但没扣库存"的情况
+
+**Q7: 旅游套餐（机票+酒店+租车+支付）用什么方案？**
+
+A: **SAGA**
+- 长事务，涉及 4 个服务
+- 第三方服务（航空公司、酒店）无法改造成 TCC
+- 可以接受最终一致性，预订失败了可以取消
+
+**Q8: 下单成功 → 赠送积分 用什么方案？**
+
+A: **MQ 事务消息**
+- 非核心业务，积分失败不影响订单
+- 异步解耦，不能拖垮下单流程
+- 高并发场景，MQ 性能好
+
+
+---
+
+## SAGA + TCC 代码健壮性改进
+
+### 三个关键问题
+
+| 问题 | 描述 | 后果 | 改进方案 |
+|------|------|------|---------|
+| **异常处理不独立** | catch 里两个回滚，一个异常另一个不执行 | SAGA 补偿不执行，资源泄漏 | 分别 try-catch |
+| **缺少 finally** | Confirm 失败，Cancel 不执行 | TCC 资源冻结无法释放 | 使用 finally + 标志位 |
+| **Try 未检查 Cancel** | 悬挂问题：Cancel 先到，Try 后到 | 资源永远被冻结 | Try 检查 Cancel 状态 |
+
+---
+
+### 改进1：异常处理的独立性
+
+**原则：** 一个回滚失败不能影响另一个回滚
+
+**错误做法：**
+```java
+} catch (Exception e) {
+    paymentTccService.cancelPay(tccTxId);  // ❌ 如果抛异常
+    compensate(sagaId, flightId, hotelId, carId);  // ❌ 不会执行
+}
+```
+
+**正确做法：**
+```java
+} catch (Exception e) {
+    // 1. TCC Cancel（独立 try-catch）
+    try {
+        paymentTccService.cancelPay(tccTxId);
+    } catch (Exception ex) {
+        log.error("TCC Cancel 失败", ex);
+        saveManualTask("TCC_CANCEL_FAILED", tccTxId, ex.getMessage());
+    }
+    
+    // 2. SAGA 补偿（独立 try-catch）
+    try {
+        compensate(sagaId, flightId, hotelId, carId);
+    } catch (Exception ex) {
+        log.error("SAGA 补偿失败", ex);
+        saveManualTask("SAGA_COMPENSATE_FAILED", sagaId, ex.getMessage());
+    }
+}
+```
+
+---
+
+### 改进2：使用 finally 确保回滚执行
+
+**原则：** 使用 finally + 标志位确保清理代码一定执行
+
+```java
+boolean success = false;
+boolean tccTrySuccess = false;
+
+try {
+    // SAGA 正向操作
+    flightId = flightService.book(order);
+    hotelId = hotelService.book(order);
+    carId = carService.book(order);
+    
+    // TCC 支付
+    try {
+        paymentTccService.tryPay(tccTxId, order.getUserId(), order.getAmount());
+        tccTrySuccess = true;
+        
+        paymentTccService.confirmPay(tccTxId);
+        success = true;
+        
+    } finally {
+        // TCC 内部 finally：如果 Try 成功但 Confirm 失败
+        if (tccTrySuccess && !success) {
+            try {
+                paymentTccService.cancelPay(tccTxId);
+            } catch (Exception ex) {
+                log.error("TCC Cancel 失败", ex);
+                saveManualTask("TCC_CANCEL_FAILED", tccTxId, ex.getMessage());
+            }
+        }
+    }
+    
+} finally {
+    // 外层 finally：如果整体失败，执行 SAGA 补偿
+    if (!success) {
+        try {
+            compensate(sagaId, flightId, hotelId, carId);
+        } catch (Exception ex) {
+            log.error("SAGA 补偿失败", ex);
+            saveManualTask("SAGA_COMPENSATE_FAILED", sagaId, ex.getMessage());
+        }
+    }
+}
+```
+
+**关键点：**
+- 使用 `success` 标志位判断是否成功
+- 使用 `tccTrySuccess` 标志位判断 Try 是否成功
+- 嵌套 finally 处理不同层级的回滚
+- finally 确保回滚一定会执行
+
+---
+
+### 改进3：TCC 悬挂问题防范
+
+**原则：** Try 执行前检查 Cancel 状态
+
+**悬挂场景：**
+```
+1. 协调者调用 Try（网络延迟）
+2. 协调者超时，调用 Cancel
+3. Cancel 执行完成（空回滚）
+4. Try 请求终于到达了！
+5. Try 冻结了金额，但永远不会有 Confirm/Cancel 来释放！❌
+```
+
+**改进后的 Try 方法：**
+```java
+@Transactional
+public void tryPay(String txId, Long userId, BigDecimal amount) {
+    // ========== 1. 防悬挂：检查是否已经 Cancel ==========
+    TccLog log = tccLogMapper.selectById(txId);
+    if (log != null && "CANCEL".equals(log.getStatus())) {
+        throw new RuntimeException("事务已取消，拒绝执行 Try");  // ✅ 防止悬挂
+    }
+    
+    // ========== 2. 幂等：检查是否已经 Try 过 ==========
+    if (log != null && "TRY".equals(log.getStatus())) {
+        return;
+    }
+    
+    // ========== 3. 业务逻辑：冻结金额 ==========
+    Account account = accountMapper.selectById(userId);
+    if (account.getBalance().compareTo(amount) < 0) {
+        throw new RuntimeException("余额不足");
+    }
+    
+    account.setFrozen(account.getFrozen().add(amount));
+    accountMapper.update(account);
+    
+    // ========== 4. 记录状态 ==========
+    if (log == null) {
+        log = new TccLog();
+        log.setTxId(txId);
+        log.setUserId(userId);
+    }
+    log.setStatus("TRY");
+    log.setAmount(amount);
+    tccLogMapper.insertOrUpdate(log);
+}
+```
+
+---
+
+### 完整的健壮代码
+
+```java
+@Service
+public class TravelSagaOrchestrator {
+    
+    public void bookTravel(TravelOrder order) {
+        String sagaId = UUID.randomUUID().toString();
+        String tccTxId = UUID.randomUUID().toString();
+        
+        String flightId = null;
+        String hotelId = null;
+        String carId = null;
+        boolean success = false;
+        boolean tccTrySuccess = false;
+        
+        try {
+            // ========== SAGA 正向操作 ==========
+            flightId = flightService.book(order);
+            saveSagaLog(sagaId, "BOOK_FLIGHT", "SUCCESS", flightId);
+            
+            hotelId = hotelService.book(order);
+            saveSagaLog(sagaId, "BOOK_HOTEL", "SUCCESS", hotelId);
+            
+            carId = carService.book(order);
+            saveSagaLog(sagaId, "BOOK_CAR", "SUCCESS", carId);
+            
+            // ========== TCC 支付（强一致性） ==========
+            try {
+                // Try: 冻结金额（带悬挂检查）
+                paymentTccService.tryPay(tccTxId, order.getUserId(), order.getAmount());
+                tccTrySuccess = true;
+                
+                // Confirm: 真正扣款
+                paymentTccService.confirmPay(tccTxId);
+                saveSagaLog(sagaId, "PAYMENT", "SUCCESS", null);
+                
+                success = true;
+                
+            } finally {
+                // TCC 内部 finally
+                if (tccTrySuccess && !success) {
+                    try {
+                        paymentTccService.cancelPay(tccTxId);
+                    } catch (Exception ex) {
+                        log.error("TCC Cancel 失败", ex);
+                        saveManualTask("TCC_CANCEL_FAILED", tccTxId, ex.getMessage());
+                    }
+                }
+            }
+            
+        } finally {
+            // 外层 finally
+            if (!success) {
+                try {
+                    compensate(sagaId, flightId, hotelId, carId);
+                } catch (Exception ex) {
+                    log.error("SAGA 补偿失败", ex);
+                    saveManualTask("SAGA_COMPENSATE_FAILED", sagaId, ex.getMessage());
+                }
+            }
+        }
+    }
+    
+    private void compensate(String sagaId, String flightId, String hotelId, String carId) {
+        // 每个补偿操作独立 try-catch
+        if (carId != null) {
+            try {
+                carService.cancel(carId);
+                saveSagaLog(sagaId, "CANCEL_CAR", "COMPENSATED", null);
+            } catch (Exception e) {
+                log.error("取消租车失败", e);
+                saveManualTask("CANCEL_CAR_FAILED", carId, e.getMessage());
+            }
+        }
+        
+        if (hotelId != null) {
+            try {
+                hotelService.cancel(hotelId);
+                saveSagaLog(sagaId, "CANCEL_HOTEL", "COMPENSATED", null);
+            } catch (Exception e) {
+                log.error("取消酒店失败", e);
+                saveManualTask("CANCEL_HOTEL_FAILED", hotelId, e.getMessage());
+            }
+        }
+        
+        if (flightId != null) {
+            try {
+                flightService.cancel(flightId);
+                saveSagaLog(sagaId, "CANCEL_FLIGHT", "COMPENSATED", null);
+            } catch (Exception e) {
+                log.error("取消机票失败", e);
+                saveManualTask("CANCEL_FLIGHT_FAILED", flightId, e.getMessage());
+            }
+        }
+    }
+}
+```
+
+---
+
+### 代码健壮性设计原则
+
+| 原则 | 说明 | 实现方式 |
+|------|------|---------|
+| **异常隔离** | 一个操作失败不影响其他操作 | 独立 try-catch |
+| **清理保证** | 确保清理代码一定执行 | finally + 标志位 |
+| **状态检查** | 执行前检查状态，防止重复或冲突 | 查询状态表 |
+| **失败记录** | 失败了记录到人工处理表 | saveManualTask() |
+| **告警通知** | 关键失败发送告警 | alertService.send() |
+
+---
+
+### 常见面试题
+
+**Q1: 为什么 catch 里的两个回滚要分别 try-catch？**
+
+A: 因为如果第一个回滚抛异常，第二个回滚就不会执行了。分别 try-catch 确保一个失败不影响另一个，保证所有回滚都会尝试执行。
+
+**Q2: 为什么要用 finally 而不是 catch？**
+
+A: 
+- **finally** 无论是否抛异常都会执行，确保清理代码一定运行
+- **catch** 只有抛异常才执行，如果没有异常但业务失败（如 return），catch 不会执行
+- 使用 finally + 标志位（success）可以准确判断是否需要回滚
+
+**Q3: TCC 的悬挂问题是什么？如何防范？**
+
+A: 
+- **悬挂场景**：Cancel 先到（空回滚），Try 后到，导致资源永远被冻结
+- **防范方法**：Try 执行前检查 Cancel 状态，如果已经 Cancel，拒绝执行 Try
+- **代码实现**：
+```java
+TccLog log = tccLogMapper.selectById(txId);
+if (log != null && "CANCEL".equals(log.getStatus())) {
+    throw new RuntimeException("事务已取消，拒绝执行");
+}
+```
+
+**Q4: 如何处理回滚失败的情况？**
+
+A: 
+1. **记录日志**：log.error() 记录详细错误信息
+2. **人工处理表**：saveManualTask() 记录到数据库
+3. **发送告警**：alertService.send() 通知运维人员
+4. **定时重试**：后台定时任务扫描人工处理表，自动重试
+5. **人工介入**：超过重试次数，人工处理
+
+**Q5: 为什么要用嵌套 finally？**
+
+A: 
+- **外层 finally**：处理 SAGA 补偿（取消机票、酒店、租车）
+- **内层 finally**：处理 TCC Cancel（释放冻结金额）
+- 两个层级的回滚逻辑不同，需要分别处理
+- 嵌套 finally 确保两个层级的回滚都会执行
+
+**Q6: 标志位 success 和 tccTrySuccess 的作用是什么？**
+
+A:
+- **success**：标记整体是否成功，用于外层 finally 判断是否需要 SAGA 补偿
+- **tccTrySuccess**：标记 TCC Try 是否成功，用于内层 finally 判断是否需要 TCC Cancel
+- 使用标志位比捕获异常更准确，因为有些失败不会抛异常（如业务校验失败）

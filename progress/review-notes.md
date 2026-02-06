@@ -3508,3 +3508,317 @@ A:
 - **success**：标记整体是否成功，用于外层 finally 判断是否需要 SAGA 补偿
 - **tccTrySuccess**：标记 TCC Try 是否成功，用于内层 finally 判断是否需要 TCC Cancel
 - 使用标志位比捕获异常更准确，因为有些失败不会抛异常（如业务校验失败）
+
+
+---
+
+## Seata 框架 - AT 模式
+
+### 手写 TCC 的痛点
+
+**问题：**
+- 每个服务要写 3 个方法（try、confirm、cancel）
+- 要处理幂等性、空回滚、悬挂
+- 要维护事务记录表
+- 开发成本高，代码侵入性强
+
+**解决方案：** Seata 框架
+
+---
+
+### Seata 是什么？
+
+**Seata = Simple Extensible Autonomous Transaction Architecture**
+
+阿里开源的分布式事务框架，支持多种事务模式：
+1. **AT 模式** - 自动补偿（最简单，推荐）
+2. **TCC 模式** - 手动补偿（灵活，复杂）
+3. **SAGA 模式** - 长事务
+4. **XA 模式** - 强一致性（性能差）
+
+---
+
+### AT 模式核心思想
+
+**你只需要写正常的业务代码，Seata 自动帮你做 TCC！**
+
+```java
+// 订单服务
+@GlobalTransactional  // 只需要加一个注解！
+public void createOrder(Order order) {
+    orderMapper.insert(order);  // 正常写法
+    stockService.reduce(...);    // 正常写法
+    accountService.deduct(...);  // 正常写法
+}
+
+// 库存服务
+public void reduce(Long productId, int quantity) {
+    stockMapper.reduce(productId, quantity);  // 正常写法
+}
+```
+
+**就这么简单！** 不需要写 try、confirm、cancel 方法！
+
+---
+
+### Seata 的角色
+
+| 角色 | 全称 | 职责 |
+|------|------|------|
+| **TC** | Transaction Coordinator | 事务协调者，管理全局事务，决定提交还是回滚 |
+| **TM** | Transaction Manager | 事务管理器，开启全局事务，提交或回滚 |
+| **RM** | Resource Manager | 资源管理器，管理分支事务，执行分支提交或回滚 |
+
+---
+
+### AT 模式执行流程
+
+#### 阶段一：执行业务 SQL
+
+```
+1. TM 向 TC 申请开启全局事务
+2. TC 返回全局事务 ID (XID)
+3. RM 执行业务 SQL 前，记录 undo_log（前镜像）
+4. RM 执行业务 SQL
+5. RM 执行业务 SQL 后，记录 undo_log（后镜像）
+6. RM 向 TC 注册分支事务
+7. RM 提交本地事务（业务数据 + undo_log）
+```
+
+**例子：扣减库存**
+```sql
+-- 1. 记录前镜像
+SELECT * FROM stock WHERE product_id = 1;
+-- 结果：{product_id: 1, quantity: 100}
+
+-- 2. 执行业务 SQL
+UPDATE stock SET quantity = quantity - 10 WHERE product_id = 1;
+
+-- 3. 记录后镜像
+SELECT * FROM stock WHERE product_id = 1;
+-- 结果：{product_id: 1, quantity: 90}
+
+-- 4. 保存 undo_log
+INSERT INTO undo_log (xid, branch_id, rollback_info) VALUES (
+    'global-tx-001',
+    'branch-001',
+    '{"beforeImage": {"quantity": 100}, "afterImage": {"quantity": 90}}'
+);
+
+-- 5. 提交本地事务
+COMMIT;
+```
+
+---
+
+#### 阶段二：提交或回滚
+
+**如果全部成功：**
+```
+1. TM 通知 TC 提交全局事务
+2. TC 通知所有 RM 提交分支事务
+3. RM 删除 undo_log
+4. 完成
+```
+
+**如果任何一个失败：**
+```
+1. TM 通知 TC 回滚全局事务
+2. TC 通知所有 RM 回滚分支事务
+3. RM 根据 undo_log 生成反向 SQL
+4. RM 执行反向 SQL（自动回滚）
+5. RM 删除 undo_log
+6. 完成
+```
+
+---
+
+### 自动回滚的原理
+
+**undo_log 记录的内容：**
+```json
+{
+    "xid": "global-tx-001",
+    "branchId": "branch-001",
+    "tableName": "stock",
+    "beforeImage": {
+        "product_id": 1,
+        "quantity": 100
+    },
+    "afterImage": {
+        "product_id": 1,
+        "quantity": 90
+    },
+    "sqlType": "UPDATE"
+}
+```
+
+**回滚步骤：**
+```
+1. TC 通知 RM 回滚
+2. RM 读取 undo_log
+3. RM 根据 beforeImage 生成反向 SQL
+   UPDATE stock SET quantity = 100 WHERE product_id = 1;
+4. RM 执行反向 SQL
+5. RM 删除 undo_log
+6. 提交
+```
+
+**数据恢复到原来的状态！** ✅
+
+---
+
+### AT 模式 vs 手写 TCC
+
+| 对比项 | Seata AT 模式 | 手写 TCC |
+|--------|--------------|----------|
+| **回滚方式** | undo_log 自动生成反向 SQL | 手动写 Cancel 方法 |
+| **开发成本** | 低（只加注解） | 高（每个服务 3 个方法） |
+| **代码侵入** | 低（正常业务代码） | 高（业务代码 + 事务代码） |
+| **性能** | 中（需要记录 undo_log） | 高（不需要 undo_log） |
+| **灵活性** | 低（只支持关系型数据库） | 高（支持任何资源） |
+| **幂等性** | Seata 自动处理 | 手动处理 |
+| **空回滚** | Seata 自动处理 | 手动处理 |
+| **悬挂** | Seata 自动处理 | 手动处理 |
+
+**记忆口诀：** AT 模式用 undo_log 换开发效率。
+
+---
+
+### AT 模式的优点
+
+1. **零侵入**
+   - 只需要加 @GlobalTransactional 注解
+   - 正常写业务代码
+
+2. **自动处理 TCC 三大问题**
+   - 幂等性：通过 xid + branchId 保证
+   - 空回滚：检查 undo_log 是否存在
+   - 悬挂：Try 执行前检查是否已经 Cancel
+
+3. **开发成本低**
+   - 不需要写 try、confirm、cancel 方法
+   - 不需要写事务记录表
+
+---
+
+### AT 模式的缺点
+
+1. **性能开销**
+   - 每次执行业务 SQL 都要：
+     - 查询前镜像（SELECT）
+     - 执行业务 SQL（UPDATE）
+     - 查询后镜像（SELECT）
+     - 插入 undo_log（INSERT）
+   - 比手写 TCC 多了 3 次数据库操作
+
+2. **只支持关系型数据库**
+   - 依赖 SQL 解析、undo_log 表、数据库事务
+   - 不支持 NoSQL（MongoDB、Redis）
+   - 不支持消息队列（RabbitMQ、Kafka）
+   - 不支持第三方 API
+
+3. **数据隔离问题**
+   - 分支事务提交后，其他事务可能读到中间状态
+   - 如果全局事务回滚，其他事务读到的是脏数据
+   - 解决方案：Seata 提供全局锁机制
+
+---
+
+### 实际项目中如何选择？
+
+#### 选择 Seata AT 模式
+
+✅ **适合场景：**
+- 业务简单，只涉及数据库操作
+- 团队经验不足，不想手写 TCC
+- 快速开发，降低成本
+
+**例子：**
+- 订单 + 库存 + 账户（都是数据库操作）
+- 内部系统，可控性强
+
+---
+
+#### 选择手写 TCC
+
+✅ **适合场景：**
+- 涉及非关系型数据库（Redis、MongoDB）
+- 涉及第三方 API（支付宝、微信支付）
+- 需要精细控制（如库存预留策略）
+- 性能要求极高
+
+**例子：**
+- 秒杀系统（Redis 扣库存）
+- 支付系统（调用第三方支付 API）
+- 旅游预订（第三方航空公司 API）
+
+---
+
+#### 混合使用
+
+✅ **实际项目中：**
+```
+订单服务 + 库存服务 → Seata AT 模式（数据库操作）
+支付服务 → 手写 TCC（调用支付宝 API）
+```
+
+**灵活组合，发挥各自优势！**
+
+---
+
+### 常见面试题
+
+**Q1: Seata AT 模式的核心原理是什么？**
+
+A: AT 模式通过 undo_log 实现自动回滚。执行业务 SQL 前后分别记录前镜像和后镜像，如果全局事务失败，根据 undo_log 生成反向 SQL 自动回滚。开发者只需要写正常的业务代码，加上 @GlobalTransactional 注解即可。
+
+**Q2: AT 模式和手写 TCC 的核心区别是什么？**
+
+A: 
+- **回滚方式**：AT 模式用 undo_log 自动生成反向 SQL，手写 TCC 需要手动写 Cancel 方法
+- **开发成本**：AT 模式只需要加注解，手写 TCC 每个服务要写 3 个方法
+- **性能**：AT 模式需要记录 undo_log（多 3 次数据库操作），手写 TCC 性能更高
+- **灵活性**：AT 模式只支持关系型数据库，手写 TCC 支持任何资源
+
+**记忆口诀：** AT 模式用 undo_log 换开发效率。
+
+**Q3: AT 模式的 undo_log 记录了什么？**
+
+A: undo_log 记录了：
+- 全局事务 ID（xid）
+- 分支事务 ID（branchId）
+- 表名（tableName）
+- 前镜像（beforeImage）：执行前的数据
+- 后镜像（afterImage）：执行后的数据
+- SQL 类型（sqlType）
+
+回滚时，根据 beforeImage 生成反向 SQL，恢复数据到原来的状态。
+
+**Q4: AT 模式如何处理 TCC 三大问题？**
+
+A:
+- **幂等性**：通过 xid + branchId 保证，重复回滚时检查 undo_log 是否已删除
+- **空回滚**：检查 undo_log 是否存在，如果不存在说明 Try 没执行，直接返回
+- **悬挂**：Try 执行前检查是否已经 Cancel，如果已经 Cancel，拒绝执行 Try
+
+**Q5: AT 模式适合什么场景？**
+
+A: 适合业务简单、只涉及数据库操作的场景，如订单 + 库存 + 账户。不适合涉及 NoSQL、第三方 API、性能要求极高的场景。
+
+**Q6: AT 模式的性能开销是什么？**
+
+A: 每次执行业务 SQL 都要：
+1. 查询前镜像（SELECT）
+2. 执行业务 SQL（UPDATE）
+3. 查询后镜像（SELECT）
+4. 插入 undo_log（INSERT）
+
+比手写 TCC 多了 3 次数据库操作，性能略低。
+
+**Q7: 实际项目中如何选择 AT 模式和手写 TCC？**
+
+A: 
+- **数据库操作** → AT 模式（开发成本低）
+- **第三方 API** → 手写 TCC（灵活性高）
+- **混合场景** → 灵活组合（订单+库存用 AT，支付用 TCC）

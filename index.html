@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>重学 Java</title>
+  <link rel="stylesheet" href="css/study.css" />
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    window.onerror = function (msg) {
+      var node = document.getElementById("boot-error");
+      if (!node) {
+        node = document.createElement("pre");
+        node.id = "boot-error";
+        document.body.appendChild(node);
+      }
+      node.textContent = String(msg);
+    };
+  </script>
+  <script src="js/curriculum.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

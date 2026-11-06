@@ -1,0 +1,7 @@
+{
+  "name": "java-study",
+  "private": true,
+  "scripts": {
+    "test": "node test/logic.test.js"
+  }
+}

@@ -2,29 +2,205 @@
 
 来源：[面试鸭 · Java 热门面试题 200 道](https://www.mianshiya.com/bank/1860871861809897474)
 
-这套题不限于 Java 语法，还覆盖集合、MySQL、Redis、Spring、Spring Boot、Spring Cloud、消息队列、Netty、计算机网络、操作系统、线上排查和后端系统设计。下面是公开页面列出的前 20 题。
+题库当前共 200 题，覆盖 Java 集合、并发、JVM、MySQL、Redis、Spring、Spring Cloud、消息队列、网络、操作系统和场景设计。题解留在面试鸭，这里只做练习清单。练完一题，把 `- [ ]` 改成 `- [x]`，并把自己的答案补进 `progress/review-notes.md`。
 
-练完一题，把 `- [ ]` 改成 `- [x]`，并把自己的答案补进 `progress/review-notes.md`。
-
-- [ ] 说说 Java 中 HashMap 的原理？ · 中等 · Java 集合
-- [ ] Java 中 ConcurrentHashMap 1.7 和 1.8 之间有哪些区别？ · 中等 · Java 集合
-- [ ] 为什么 JDK 1.8 对 HashMap 进行了红黑树的改动？ · 中等 · Java 集合
-- [ ] JDK 1.8 对 HashMap 除了红黑树还进行了哪些改动？ · 中等 · Java 集合
-- [ ] Java 中有哪些集合类？请简单介绍 · 简单 · Java 集合
-- [ ] MySQL 索引的最左前缀匹配原则是什么？ · 简单 · MySQL
-- [ ] 数据库的脏读、不可重复读和幻读分别是什么？ · 中等 · MySQL
-- [ ] MySQL 的存储引擎有哪些？它们之间有什么区别？ · 中等 · MySQL
-- [ ] MySQL 的覆盖索引是什么？ · 中等 · MySQL
-- [ ] MySQL 的索引类型有哪些？ · 简单 · MySQL
-- [ ] MySQL 的索引下推是什么？ · 中等 · MySQL
-- [ ] MySQL InnoDB 引擎中的聚簇索引和非聚簇索引有什么区别？ · 中等 · MySQL
-- [ ] MySQL 中的回表是什么？ · 中等 · MySQL
-- [ ] MySQL 中使用索引一定有效吗？如何排查索引效果？ · 中等 · MySQL
-- [ ] RabbitMQ 怎么实现延迟队列？ · 中等 · 消息队列
-- [ ] MySQL 中的索引数量是否越多越好？为什么？ · 中等 · MySQL
-- [ ] 为什么 RocketMQ 不使用 Zookeeper 作为注册中心呢？而选择自己实现 NameServer？ · 中等 · RocketMQ
-- [ ] 请详细描述 MySQL 的 B+ 树中查询数据的全过程 · 困难 · MySQL
-- [ ] RabbitMQ 中消息什么时候会进入死信交换机？ · 中等 · RabbitMQ
-- [ ] 为什么 MySQL 选择使用 B+ 树作为索引结构？ · 中等 · MySQL
-
-题库共 200 题。当前网络打开题库页被站点安全策略拦住了，公开索引只给出了首页这 20 题。打开上面的链接，从第 2 页继续补进这份清单。
+- [ ] [说说 Java 中 HashMap 的原理？](https://www.mianshiya.com/question/1834107117591187457) · 中等 · Java、Java 基础
+- [ ] [Java 中 ConcurrentHashMap 1.7 和 1.8 之间有哪些区别？](https://www.mianshiya.com/question/1780933294813114369) · 中等 · Java 集合、Java
+- [ ] [为什么 JDK 1.8 对 HashMap 进行了红黑树的改动？](https://www.mianshiya.com/question/1780933294771171329) · 中等 · Java 集合、Java
+- [ ] [JDK 1.8 对 HashMap 除了红黑树还进行了哪些改动？](https://www.mianshiya.com/question/1780933294775365634) · 中等 · Java 集合、Java
+- [ ] [Java 中有哪些集合类？请简单介绍](https://www.mianshiya.com/question/1780933294699868162) · 简单 · Java 集合、Java
+- [ ] [MySQL 索引的最左前缀匹配原则是什么？](https://www.mianshiya.com/question/1780933295450648578) · 简单 · 会员 · MySQL、数据库
+- [ ] [数据库的脏读、不可重复读和幻读分别是什么？](https://www.mianshiya.com/question/1780933295496785922) · 中等 · 会员 · MySQL、数据库
+- [ ] [MySQL 的存储引擎有哪些？它们之间有什么区别？](https://www.mianshiya.com/question/1780933295433871361) · 中等 · 会员 · MySQL、数据库
+- [ ] [MySQL 的覆盖索引是什么？](https://www.mianshiya.com/question/1780933295454842881) · 中等 · 会员 · MySQL、数据库
+- [ ] [MySQL 的索引类型有哪些？](https://www.mianshiya.com/question/1780933295438065665) · 简单 · 会员 · MySQL、数据库
+- [ ] [MySQL 的索引下推是什么？](https://www.mianshiya.com/question/1780933295459037186) · 中等 · 会员 · MySQL、数据库
+- [ ] [MySQL InnoDB 引擎中的聚簇索引和非聚簇索引有什么区别？](https://www.mianshiya.com/question/1780933295442259970) · 中等 · 会员 · MySQL、数据库
+- [ ] [MySQL 中的回表是什么？](https://www.mianshiya.com/question/1780933295446454273) · 中等 · 会员 · MySQL、数据库
+- [ ] [MySQL 中使用索引一定有效吗？如何排查索引效果？](https://www.mianshiya.com/question/1780933295463231490) · 中等 · 会员 · MySQL、数据库、场景题
+- [ ] [RabbitMQ 怎么实现延迟队列？](https://www.mianshiya.com/question/1824003166933868546) · 中等 · 会员 · 消息队列、RabbitMQ
+- [ ] [MySQL 中的索引数量是否越多越好？为什么？](https://www.mianshiya.com/question/1780933295467425794) · 中等 · 会员 · MySQL、数据库
+- [ ] [为什么 RocketMQ 不使用 Zookeeper 作为注册中心呢？而选择自己实现 NameServer？](https://www.mianshiya.com/question/1806753671221846017) · 中等 · 会员 · RocketMQ、消息队列
+- [ ] [请详细描述 MySQL 的 B+ 树中查询数据的全过程](https://www.mianshiya.com/question/1780933295471620098) · 困难 · 会员 · MySQL、数据库
+- [ ] [RabbitMQ 中消息什么时候会进入死信交换机？](https://www.mianshiya.com/question/1803522489495052290) · 中等 · 会员 · RabbitMQ、消息队列
+- [ ] [为什么 MySQL 选择使用 B+ 树作为索引结构？](https://www.mianshiya.com/question/1780933295475814402) · 中等 · 会员 · MySQL、数据库
+- [ ] [RabbitMQ 中无法路由的消息会去到哪里？](https://www.mianshiya.com/question/1803521393330479105) · 中等 · 会员 · RabbitMQ、消息队列
+- [ ] [MySQL 三层 B+ 树能存多少数据？](https://www.mianshiya.com/question/1849347477245734913) · 中等 · 会员 · MySQL、数据库
+- [ ] [Kafka为什么要抛弃 Zookeeper？](https://www.mianshiya.com/question/1803241276880445442) · 中等 · 会员 · Kafka、Zookeeper、消息队列
+- [ ] [详细描述一条 SQL 语句在 MySQL 中的执行过程。](https://www.mianshiya.com/question/1780933295429677057) · 中等 · 会员 · MySQL、数据库
+- [ ] [Kafka 中 Zookeeper 的作用？](https://www.mianshiya.com/question/1803079507444752385) · 中等 · 会员 · Kafka、消息队列
+- [ ] [MySQL 是如何实现事务的？](https://www.mianshiya.com/question/1780933295475814403) · 困难 · 会员 · MySQL、数据库
+- [ ] [为什么 Java 8 移除了永久代（PermGen）并引入了元空间（Metaspace）？](https://www.mianshiya.com/question/1780933295228350466) · 困难 · 会员 · JVM、Java
+- [ ] [说一下 Kafka 中关于事务消息的实现？](https://www.mianshiya.com/question/1802605640969166849) · 困难 · 会员 · Kafka、消息队列
+- [ ] [MySQL 事务的二阶段提交是什么？](https://www.mianshiya.com/question/1849298413057683458) · 中等 · 会员 · MySQL、数据库
+- [ ] [说一下 RocketMQ 中关于事务消息的实现？](https://www.mianshiya.com/question/1802465623588282370) · 困难 · RocketMQ、消息队列
+- [ ] [MySQL 中长事务可能会导致哪些问题？](https://www.mianshiya.com/question/1780933295480008706) · 中等 · 会员 · MySQL、数据库
+- [ ] [RocketMQ 的事务消息有什么缺点？你还了解过别的事务消息实现吗？](https://www.mianshiya.com/question/1802338786811912193) · 中等 · 会员 · 消息队列、RocketMQ
+- [ ] [MySQL 中的 MVCC 是什么？](https://www.mianshiya.com/question/1780933295484203009) · 困难 · 会员 · MySQL、数据库
+- [ ] [为什么需要消息队列？](https://www.mianshiya.com/question/1801517574921723905) · 中等 · 会员 · 消息队列
+- [ ] [MySQL 中的事务隔离级别有哪些？](https://www.mianshiya.com/question/1780933295492591617) · 简单 · 会员 · MySQL、数据库
+- [ ] [说一下消息队列的模型有哪些？](https://www.mianshiya.com/question/1801520684633235458) · 中等 · 会员 · 消息队列
+- [ ] [MySQL 默认的事务隔离级别是什么？为什么选择这个级别？](https://www.mianshiya.com/question/1780933295492591618) · 简单 · 会员 · MySQL、数据库
+- [ ] [谈谈你了解的最常见的几种设计模式，说说他们的应用场景](https://www.mianshiya.com/question/1804014835632644098) · 中等 · 会员 · 设计模式
+- [ ] [MySQL 中有哪些锁类型？](https://www.mianshiya.com/question/1780933295500980225) · 中等 · 会员 · MySQL、数据库
+- [ ] [什么是策略模式？一般用在什么场景？](https://www.mianshiya.com/question/1803305303140720641) · 简单 · 会员 · 设计模式
+- [ ] [MySQL 的乐观锁和悲观锁是什么？](https://www.mianshiya.com/question/1780933295505174530) · 中等 · 会员 · MySQL、数据库
+- [ ] [什么是责任链模式？一般用在什么场景？](https://www.mianshiya.com/question/1803305518413373442) · 简单 · 会员 · 设计模式
+- [ ] [MySQL 中如果发生死锁应该如何解决？](https://www.mianshiya.com/question/1780933295505174531) · 中等 · 会员 · MySQL、数据库
+- [ ] [什么是模板方法模式？一般用在什么场景？](https://www.mianshiya.com/question/1802939152477790209) · 简单 · 会员 · 设计模式
+- [ ] [MySQL 中 count(*)、count(1) 和 count(字段名) 有什么区别？](https://www.mianshiya.com/question/1780933295513563137) · 简单 · 会员 · MySQL、数据库
+- [ ] [什么是观察者模式？一般用在什么场景？](https://www.mianshiya.com/question/1802938904808333313) · 简单 · 会员 · 设计模式
+- [ ] [MySQL 中如何进行 SQL 调优？](https://www.mianshiya.com/question/1780933295521951745) · 中等 · 会员 · MySQL、数据库、场景题
+- [ ] [什么是代理模式？一般用在什么场景？](https://www.mianshiya.com/question/1802557695141945346) · 中等 · 会员 · 设计模式
+- [ ] [说说 Spring 启动过程？](https://www.mianshiya.com/question/1797569186902441985) · 中等 · 会员 · Spring
+- [ ] [Redis 集群的实现原理是什么？](https://www.mianshiya.com/question/1780933295651975169) · 中等 · Redis
+- [ ] [如何使用 MySQL 的 EXPLAIN 语句进行查询分析？](https://www.mianshiya.com/question/1780933295509368833) · 中等 · 会员 · MySQL、数据库
+- [ ] [你了解的 Spring 都用到哪些设计模式？](https://www.mianshiya.com/question/1780933295408705538) · 中等 · 会员 · Spring
+- [ ] [Redis 集群会出现脑裂问题吗？](https://www.mianshiya.com/question/1780933295651975170) · 中等 · 会员 · Redis
+- [ ] [请描述简单工厂模式的工作原理。](https://www.mianshiya.com/question/1802171196621791233) · 简单 · 会员 · 设计模式
+- [ ] [Spring 有哪几种事务传播行为?](https://www.mianshiya.com/question/1780933295417094146) · 中等 · 会员 · Spring
+- [ ] [Redis 中如何实现分布式锁？](https://www.mianshiya.com/question/1780933295660363778) · 中等 · 会员 · Redis
+- [ ] [MySQL 中如何解决深度分页的问题？](https://www.mianshiya.com/question/1780933295572283394) · 中等 · 会员 · MySQL、数据库、场景题
+- [ ] [说说 Springboot 的启动流程？](https://www.mianshiya.com/question/1846441429268488194) · 中等 · 会员 · Java、Spring Boot
+- [ ] [Redis 实现分布式锁时可能遇到的问题有哪些？](https://www.mianshiya.com/question/1780933295668752385) · 中等 · 会员 · Redis
+- [ ] [工厂模式和抽象工厂模式有什么区别？](https://www.mianshiya.com/question/1801818998708707329) · 中等 · 会员 · 设计模式
+- [ ] [SpringBoot 是如何实现自动配置的？](https://www.mianshiya.com/question/1846171814407757826) · 中等 · 会员 · Java、Spring Boot
+- [ ] [什么是 MySQL 的主从同步机制？它是如何实现的？](https://www.mianshiya.com/question/1780933295538728962) · 中等 · 会员 · MySQL、数据库
+- [ ] [说说 Redisson 分布式锁的原理?](https://www.mianshiya.com/question/1833406734003052546) · 中等 · 会员 · Redis、Redisson
+- [ ] [如何理解 Spring Boot 中的 starter？](https://www.mianshiya.com/question/1797866285598638082) · 中等 · 会员 · Spring Boot
+- [ ] [如何使用 Redis 快速实现排行榜？](https://www.mianshiya.com/question/1780933295681335299) · 中等 · 会员 · Redis
+- [ ] [Redis 中如何保证缓存与数据库的数据一致性？](https://www.mianshiya.com/question/1780933295677140994) · 中等 · 会员 · Redis
+- [ ] [说说 TCP 的三次握手？](https://www.mianshiya.com/question/1780933295731666945) · 简单 · 会员 · 网络
+- [ ] [简单说说 Netty 的零拷贝机制？](https://www.mianshiya.com/question/1804893517888823297) · 中等 · 会员 · Netty
+- [ ] [什么是配置中心？有哪些常见的配置中心？](https://www.mianshiya.com/question/1795829113869697025) · 中等 · 会员 · Spring Cloud
+- [ ] [说说 TCP 的四次挥手？](https://www.mianshiya.com/question/1780933295740055554) · 简单 · 会员 · 网络
+- [ ] [Netty 是如何解决粘包和拆包问题的？](https://www.mianshiya.com/question/1805371281377009665) · 中等 · 会员 · Netty
+- [ ] [Spring Boot 是如何通过 main 方法启动 web 项目的？](https://www.mianshiya.com/question/1796710513191813121) · 中等 · 会员 · Spring Boot
+- [ ] [什么情况下需要使用分布式事务，有哪些方案？](https://www.mianshiya.com/question/1797616463733981185) · 中等 · 会员 · Spring Cloud、微服务、分布式事务
+- [ ] [Redis 为什么这么快？](https://www.mianshiya.com/question/1780933295589060609) · 中等 · 会员 · Redis
+- [ ] [如何使用 Redis 快速实现布隆过滤器？](https://www.mianshiya.com/question/1780933295689723905) · 中等 · 会员 · Redis
+- [ ] [为什么 Java 中 HashMap 的默认负载因子是 0.75？](https://www.mianshiya.com/question/1780933294758588418) · 中等 · Java 集合、Java
+- [ ] [如何处理 MySQL 的主从同步延迟？](https://www.mianshiya.com/question/1780933295542923266) · 中等 · 会员 · MySQL、数据库
+- [ ] [Netty 如何解决 JDK NIO 中的空轮询 Bug？](https://www.mianshiya.com/question/1806039947026817025) · 中等 · 会员 · Netty
+- [ ] [Java 中 HashMap 的扩容机制是怎样的？](https://www.mianshiya.com/question/1780933294750199809) · 中等 · Java 集合、Java
+- [ ] [为什么 Redis 设计为单线程？6.0 版本为何引入多线程？](https://www.mianshiya.com/question/1780933295593254914) · 中等 · 会员 · Redis
+- [ ] [为什么 TCP 挥手需要有 TIME_WAIT 状态?](https://www.mianshiya.com/question/1780933295748444163) · 中等 · 会员 · 网络
+- [ ] [Spring Boot 的核心特性有哪些？](https://www.mianshiya.com/question/1796707609684869122) · 中等 · 会员 · Spring Boot
+- [ ] [为什么 HashMap 在 Java 中扩容时采用 2 的 n 次方倍？](https://www.mianshiya.com/question/1780933294754394113) · 中等 · Java 集合、Java
+- [ ] [你在项目中使用的 Redis 客户端是什么？](https://www.mianshiya.com/question/1780933295698112514) · 简单 · 会员 · Redis
+- [ ] [TCP 超时重传机制是为了解决什么问题？](https://www.mianshiya.com/question/1780933295761027073) · 简单 · 会员 · 网络
+- [ ] [简述 MyBatis 的插件运行原理，以及如何编写一个插件？](https://www.mianshiya.com/question/1802872613967831042) · 中等 · 会员 · MyBatis
+- [ ] [数组和链表在 Java 中的区别是什么？](https://www.mianshiya.com/question/1780933294704062466) · 中等 · Java 集合、Java
+- [ ] [Redis 中常见的数据类型有哪些？](https://www.mianshiya.com/question/1780933295593254915) · 简单 · 会员 · Redis
+- [ ] [TCP 滑动窗口的作用是什么？](https://www.mianshiya.com/question/1780933295777804290) · 中等 · 会员 · 网络
+- [ ] [介绍一下 Reactor 线程模型？](https://www.mianshiya.com/question/1804877046357893121) · 中等 · 会员 · Netty
+- [ ] [Java 线程池核心线程数在运行过程中能修改吗？如何修改？](https://www.mianshiya.com/question/1830885090747584514) · 困难 · Java、Java并发
+- [ ] [TCP/IP 四层模型是什么？](https://www.mianshiya.com/question/1780933295790387202) · 简单 · 会员 · 网络
+- [ ] [说说 MyBatis 的缓存机制？](https://www.mianshiya.com/question/1802597639336042498) · 中等 · MyBatis
+- [ ] [什么是 Spring Boot？](https://www.mianshiya.com/question/1796705417326362626) · 中等 · 会员 · Spring Boot
+- [ ] [Java 中如何创建多线程？](https://www.mianshiya.com/question/1828722732530307073) · 简单 · Java、Java并发
+- [ ] [Redis 中跳表的实现原理是什么？](https://www.mianshiya.com/question/1780933295597449217) · 困难 · 会员 · Redis
+- [ ] [Redis 性能瓶颈时如何处理？](https://www.mianshiya.com/question/1780933295702306818) · 中等 · 会员 · Redis
+- [ ] [OSI 七层模型是什么？](https://www.mianshiya.com/question/1780933295798775809) · 中等 · 会员 · 网络
+- [ ] [说说 AQS 吧？](https://www.mianshiya.com/question/1780933295018635266) · 中等 · Java并发、Java
+- [ ] [Cookie、Session、Token 之间有什么区别？](https://www.mianshiya.com/question/1780933295798775810) · 中等 · 会员 · 网络
+- [ ] [什么是分库分表？分库分表有哪些类型（或策略）？](https://www.mianshiya.com/question/1780933295542923267) · 简单 · 会员 · MySQL、数据库
+- [ ] [MyBatis 中 #{} 和 ${} 的区别是什么？](https://www.mianshiya.com/question/1801499613443989505) · 简单 · 会员 · MyBatis
+- [ ] [Java 中的 final 关键字是否能保证变量的可见性？](https://www.mianshiya.com/question/1780933295047995393) · 中等 · Java并发、Java
+- [ ] [Redis 的 hash 是什么？](https://www.mianshiya.com/question/1780933295601643521) · 中等 · 会员 · Redis
+- [ ] [从网络角度来看，用户从输入网址到网页显示，期间发生了什么？](https://www.mianshiya.com/question/1826556994582671361) · 困难 · 会员 · 网络
+- [ ] [Dubbo 和 Spring Cloud Gateway 有什么区别？](https://www.mianshiya.com/question/1818923905676939265) · 困难 · 会员 · 分布式、Spring Cloud、Dubbo
+- [ ] [什么是 Java 中的原子性、可见性和有序性？](https://www.mianshiya.com/question/1780933295035412481) · 困难 · Java并发、Java
+- [ ] [线程和进程有什么区别？](https://www.mianshiya.com/question/1780933294859251714) · 中等 · 会员 · 操作系统、计算机基础
+- [ ] [说说你知道的几种 I/O 模型](https://www.mianshiya.com/question/1804476796656885762) · 中等 · 会员 · Netty
+- [ ] [MyBatis 与 Hibernate 有哪些不同？](https://www.mianshiya.com/question/1801451484724142081) · 中等 · 会员 · MyBatis
+- [ ] [什么是 Java 内存模型（JMM）？](https://www.mianshiya.com/question/1780933295031218178) · 困难 · Java并发、Java
+- [ ] [Redis 和 Memcached 有哪些区别？](https://www.mianshiya.com/question/1780933295605837825) · 中等 · 会员 · Redis
+- [ ] [什么是物理地址，什么是逻辑地址？](https://www.mianshiya.com/question/1780933295861690370) · 中等 · 会员 · 操作系统
+- [ ] [说说什么是 API 网关？它有什么作用？](https://www.mianshiya.com/question/1818921408619024386) · 中等 · 会员 · 分布式、Spring Cloud
+- [ ] [什么是 Java 的 CAS（Compare-And-Swap）操作？](https://www.mianshiya.com/question/1780933295027023873) · 中等 · Java并发、Java
+- [ ] [Select、Poll、Epoll 之间有什么区别？](https://www.mianshiya.com/question/1780933295857496065) · 中等 · 会员 · 操作系统
+- [ ] [什么是 MyBatis-Plus？它有什么作用？它和 MyBatis 有哪些区别？](https://www.mianshiya.com/question/1772519661640982530) · 中等 · 会员 · Mybatis-plus、编程导航
+- [ ] [为什么 Java 中的 ThreadLocal 对 key 的引用为弱引用？](https://www.mianshiya.com/question/1780933295073161218) · 中等 · 会员 · Java并发、Java
+- [ ] [编译执行与解释执行的区别是什么？JVM 使用哪种方式？](https://www.mianshiya.com/question/1780933295161241602) · 中等 · 会员 · JVM、Java
+- [ ] [Redis 支持事务吗？如何实现？](https://www.mianshiya.com/question/1780933295610032129) · 中等 · 会员 · Redis
+- [ ] [到底什么是 TCP 连接？](https://www.mianshiya.com/question/1780933295706501122) · 简单 · 网络
+- [ ] [消息队列如何处理重复消息（保证消息的幂等性）？](https://www.mianshiya.com/question/1801964482106564610) · 中等 · 会员 · 消息队列
+- [ ] [Java 中什么情况会导致死锁？如何避免？](https://www.mianshiya.com/question/1780933295110909953) · 中等 · Java并发、Java
+- [ ] [消息队列如何保证消息的有序性（顺序性）？](https://www.mianshiya.com/question/1802305740993798145) · 中等 · 会员 · 消息队列
+- [ ] [说一下 Netty 的应用场景？](https://www.mianshiya.com/question/1804860496687079425) · 中等 · 会员 · Netty
+- [ ] [什么是 Spring IOC？](https://www.mianshiya.com/question/1780933295329013762) · 中等 · 会员 · Spring
+- [ ] [你了解 Java 线程池的原理吗？](https://www.mianshiya.com/question/1780933294892806145) · 中等 · Java并发、Java
+- [ ] [Redis 数据过期后的删除策略是什么？](https://www.mianshiya.com/question/1780933295614226434) · 中等 · 会员 · Redis
+- [ ] [消息队列如何处理消息堆积？](https://www.mianshiya.com/question/1802306411117748226) · 中等 · 会员 · 消息队列
+- [ ] [什么是服务熔断？](https://www.mianshiya.com/question/1800278016326443010) · 中等 · 会员 · Spring Cloud、服务熔断、微服务
+- [ ] [Java 线程池有哪些拒绝策略？](https://www.mianshiya.com/question/1780933294909583361) · 中等 · Java并发、Java
+- [ ] [HTTP 1.0 和 2.0 有什么区别？](https://www.mianshiya.com/question/1780933295710695425) · 中等 · 网络
+- [ ] [消息队列如何保证消息不丢失？](https://www.mianshiya.com/question/1801955779278086145) · 中等 · 会员 · 消息队列
+- [ ] [Spring AOP默认用的是什么动态代理，两者的区别？](https://www.mianshiya.com/question/1780933295366762497) · 中等 · 会员 · Spring
+- [ ] [如何合理地设置 Java 线程池的线程数？](https://www.mianshiya.com/question/1780933294905389057) · 中等 · Java并发、Java
+- [ ] [Redis 中有哪些内存淘汰策略？](https://www.mianshiya.com/question/1780933295618420737) · 中等 · 会员 · Redis
+- [ ] [MySQL 中 如果我 select * from 一个有 1000 万行的表，内存会飙升么？](https://www.mianshiya.com/question/1854440758043156482) · 困难 · 会员 · 场景题
+- [ ] [消息队列设计成推消息还是拉消息？推拉模式的优缺点？](https://www.mianshiya.com/question/1802333941753257985) · 中等 · 会员 · 消息队列、场景题
+- [ ] [你使用过哪些 Java 并发工具类？](https://www.mianshiya.com/question/1780933294930554882) · 中等 · Java并发、Java
+- [ ] [什么是设计模式？请简述其作用。](https://www.mianshiya.com/question/1801818229490130946) · 简单 · 会员 · 设计模式
+- [ ] [什么是 AOP？](https://www.mianshiya.com/question/1780933295362568194) · 中等 · 会员 · Spring
+- [ ] [什么是服务降级？](https://www.mianshiya.com/question/1800275120583155713) · 中等 · 会员 · Spring Cloud、微服务、服务降级
+- [ ] [Synchronized 和 ReentrantLock 有什么区别？](https://www.mianshiya.com/question/1780933294976692225) · 中等 · Java并发、Java
+- [ ] [Redis 的 Lua 脚本功能是什么？如何使用？](https://www.mianshiya.com/question/1780933295618420738) · 中等 · 会员 · Redis
+- [ ] [HTTP 2.0 和 3.0 有什么区别？](https://www.mianshiya.com/question/1780933295710695426) · 中等 · 网络
+- [ ] [单例模式有哪几种实现？如何保证线程安全？](https://www.mianshiya.com/question/1801818854546284546) · 中等 · 会员 · 设计模式
+- [ ] [Java 的 synchronized 是怎么实现的？](https://www.mianshiya.com/question/1780933294980886530) · 困难 · Java并发、Java
+- [ ] [如何设计一个秒杀功能？](https://www.mianshiya.com/question/1818587621468135426) · 困难 · 会员 · 系统设计、场景题
+- [ ] [为什么不选择使用原生的 NIO 而选择使用 Netty 呢？](https://www.mianshiya.com/question/1805360631846215681) · 中等 · 会员 · Netty
+- [ ] [看过源码吗？说下 Spring 由哪些重要的模块组成？](https://www.mianshiya.com/question/1780933295320625154) · 中等 · 会员 · Spring
+- [ ] [如何优化 Java 中的锁的使用？](https://www.mianshiya.com/question/1780933295010246658) · 中等 · Java并发、Java
+- [ ] [Redis 的 Pipeline 功能是什么？](https://www.mianshiya.com/question/1780933295622615042) · 中等 · 会员 · Redis
+- [ ] [让你设计一个分布式 ID 发号器，怎么设计？](https://www.mianshiya.com/question/1801517567179038722) · 困难 · 会员 · 系统设计、场景题
+- [ ] [什么是服务雪崩？](https://www.mianshiya.com/question/1800272846473469954) · 简单 · 会员 · 服务容灾、Spring Cloud、微服务
+- [ ] [JVM 由哪些部分组成？](https://www.mianshiya.com/question/1854787878122102785) · 中等 · Java、JVM
+- [ ] [Redis 通常应用于哪些场景？](https://www.mianshiya.com/question/1780933295584866306) · 简单 · 会员 · Redis
+- [ ] [让你设计一个短链系统，怎么设计？](https://www.mianshiya.com/question/1796413025973043202) · 困难 · 会员 · 系统设计、场景题
+- [ ] [什么是循环依赖（常问）？](https://www.mianshiya.com/question/1780933295379345410) · 中等 · Spring
+- [ ] [JVM 垃圾回收调优的主要目标是什么？](https://www.mianshiya.com/question/1780933295303847937) · 中等 · 会员 · JVM、Java
+- [ ] [Redis 中的 Big Key 问题是什么？如何解决？](https://www.mianshiya.com/question/1780933295626809345) · 中等 · 会员 · Redis
+- [ ] [HTTP 和 HTTPS 有什么区别？](https://www.mianshiya.com/question/1780933295714889729) · 中等 · 网络
+- [ ] [分布式锁一般都怎样实现？](https://www.mianshiya.com/question/1800458377811533825) · 中等 · 会员 · 系统设计、场景题
+- [ ] [如何对 Java 的垃圾回收进行调优？](https://www.mianshiya.com/question/1780933295308042242) · 中等 · 会员 · JVM、Java
+- [ ] [如何设计一个点赞系统？](https://www.mianshiya.com/question/1772882950057148418) · 中等 · 会员 · 系统设计、场景题
+- [ ] [Spring 如何解决循环依赖？](https://www.mianshiya.com/question/1780933295383539714) · 中等 · Spring
+- [ ] [HTTP 与 RPC 之间的区别？](https://www.mianshiya.com/question/1799803242210992130) · 中等 · 会员 · 微服务、Spring Cloud、远程调用
+- [ ] [常用的 JVM 配置参数有哪些？](https://www.mianshiya.com/question/1780933295312236546) · 中等 · 会员 · JVM、Java
+- [ ] [如何解决 Redis 中的热点 key 问题？](https://www.mianshiya.com/question/1780933295631003650) · 中等 · 会员 · Redis
+- [ ] [TCP 是用来解决什么问题？](https://www.mianshiya.com/question/1780933295719084033) · 简单 · 会员 · 网络
+- [ ] [让你设计一个 RPC 框架，怎么设计？](https://www.mianshiya.com/question/1796073573673205762) · 困难 · 系统设计、场景题
+- [ ] [Java 中常见的垃圾收集器有哪些？](https://www.mianshiya.com/question/1780933295215767553) · 中等 · 会员 · JVM、Java
+- [ ] [什么是限流？限流算法有哪些？怎么实现的？](https://www.mianshiya.com/question/1802901573531410433) · 中等 · 会员 · 系统设计、场景题
+- [ ] [Netty 性能为什么这么高？](https://www.mianshiya.com/question/1805363325361135618) · 中等 · 会员 · Netty
+- [ ] [为什么 Spring 循环依赖需要三级缓存，二级不够吗？](https://www.mianshiya.com/question/1780933295387734017) · 中等 · Spring
+- [ ] [JVM 的内存区域是如何划分的？](https://www.mianshiya.com/question/1780933295169630210) · 中等 · JVM、Java
+- [ ] [Redis 的持久化机制有哪些？](https://www.mianshiya.com/question/1780933295635197954) · 中等 · 会员 · Redis
+- [ ] [如果发现 Redis 内存溢出了？你会怎么做？请给出排查思路和解决方案](https://www.mianshiya.com/question/1823991791071256577) · 困难 · 会员 · 场景题
+- [ ] [负载均衡算法有哪些？](https://www.mianshiya.com/question/1799731326863351810) · 中等 · 会员 · 负载均衡、Spring Cloud、微服务
+- [ ] [Java 中有哪些垃圾回收算法？](https://www.mianshiya.com/question/1780933295236739074) · 中等 · JVM、Java
+- [ ] [Redis 中的缓存击穿、缓存穿透和缓存雪崩是什么？](https://www.mianshiya.com/question/1780933295672946690) · 中等 · 会员 · Redis
+- [ ] [线上发现 Redis 机器爆了，如何优化？](https://www.mianshiya.com/question/1795660206586503170) · 中等 · 会员 · 场景题
+- [ ] [说下 Spring Bean 的生命周期？](https://www.mianshiya.com/question/1780933295396122626) · 中等 · 会员 · Spring
+- [ ] [JVM 有那几种情况会产生 OOM（内存溢出）？](https://www.mianshiya.com/question/1855856573426638849) · 中等 · 会员 · Java、JVM
+- [ ] [Redis 在生成 RDB 文件时如何处理请求？](https://www.mianshiya.com/question/1780933295639392257) · 中等 · 会员 · Redis
+- [ ] [TCP 和 UDP 有什么区别？](https://www.mianshiya.com/question/1780933295719084034) · 简单 · 会员 · 网络
+- [ ] [线上业务服务器 CPU 飙高如何排查？](https://www.mianshiya.com/question/1807672527650004993) · 中等 · 会员 · 线上问题排查
+- [ ] [Java 中 volatile 关键字的作用是什么？](https://www.mianshiya.com/question/1780933295115104258) · 中等 · Java并发、Java
+- [ ] [怎么分析 JVM 当前的内存占用情况？OOM 后怎么分析？](https://www.mianshiya.com/question/1818990174270726145) · 困难 · 会员 · 场景题、JVM
+- [ ] [Spring MVC 具体的工作原理？](https://www.mianshiya.com/question/1780933295400316931) · 中等 · 会员 · Spring
+- [ ] [分布式和微服务有什么区别？](https://www.mianshiya.com/question/1798351981564264450) · 中等 · 会员 · Spring Cloud、微服务、分布式
+- [ ] [什么是 Java 中的 ABA 问题？](https://www.mianshiya.com/question/1780933295123492866) · 困难 · Java并发、Java
+- [ ] [Redis 的哨兵机制是什么？](https://www.mianshiya.com/question/1780933295643586562) · 中等 · 会员 · Redis
+- [ ] [TCP 的粘包和拆包能说说吗？](https://www.mianshiya.com/question/1780933295727472641) · 中等 · 会员 · 网络
+- [ ] [线程的生命周期在 Java 中是如何定义的？](https://www.mianshiya.com/question/1780933294871834626) · 中等 · Java并发、Java
+- [ ] [在 MySQL 中建索引时需要注意哪些事项？](https://www.mianshiya.com/question/1780933295459037187) · 简单 · 会员 · MySQL、数据库
+- [ ] [Netty 采用了哪些设计模式？](https://www.mianshiya.com/question/1805374399812673537) · 中等 · 会员 · Netty
+- [ ] [Spring 中的 DI 是什么？](https://www.mianshiya.com/question/1780933295333208066) · 中等 · 会员 · Spring
+- [ ] [Redis 主从复制的实现原理是什么？](https://www.mianshiya.com/question/1780933295647780865) · 中等 · Redis
+- [ ] [在什么情况下，不推荐为数据库建立索引？](https://www.mianshiya.com/question/1805147589229355009) · 中等 · 会员 · MySQL、数据库
+- [ ] [什么是 Seata？](https://www.mianshiya.com/question/1797947969769701378) · 中等 · 会员 · Seata、微服务、Spring Cloud

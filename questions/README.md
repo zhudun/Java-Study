@@ -4,7 +4,7 @@
 
 | 题库 | 规模 | 已录入 | 清单 |
 | --- | --- | --- | --- |
-| [Java 基础面试题](https://www.mianshiya.com/bank/1787463103423897602) | 69 | 20 | [java-basics.md](java-basics.md) |
-| [Java 热门面试题 200 道](https://www.mianshiya.com/bank/1860871861809897474) | 200 | 20 | [java-hot-200.md](java-hot-200.md) |
+| [Java 基础面试题](https://www.mianshiya.com/bank/1787463103423897602) | 65 | 65 | [java-basics.md](java-basics.md) |
+| [Java 热门面试题 200 道](https://www.mianshiya.com/bank/1860871861809897474) | 200 | 200 | [java-hot-200.md](java-hot-200.md) |
 
-录入日期：2026-11-06。两份清单目前都是题库首页的 20 题。
+录入日期：2026-11-06。

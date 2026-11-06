@@ -20,7 +20,7 @@
 
 ## 面试题
 
-- [面试鸭 · Java 基础面试题](https://www.mianshiya.com/bank/1787463103423897602) - 69 题，本地清单见 `questions/java-basics.md`
+- [面试鸭 · Java 基础面试题](https://www.mianshiya.com/bank/1787463103423897602) - 65 题，本地清单见 `questions/java-basics.md`
 - [面试鸭 · Java 热门面试题 200 道](https://www.mianshiya.com/bank/1860871861809897474) - 本地清单见 `questions/java-hot-200.md`
 
 ## 练习平台

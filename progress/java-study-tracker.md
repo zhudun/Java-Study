@@ -18,7 +18,7 @@
 ⏰ **学习天数**: 13 天
 🎯 **目标**: 系统掌握 Java 核心知识
 
-面试题清单：`questions/java-basics.md`（基础，已录入首页 20/69）、`questions/java-hot-200.md`（热门，已录入首页 20/200）。题解仍在面试鸭原题库。
+面试题清单：`questions/java-basics.md`（基础 65/65）、`questions/java-hot-200.md`（热门 200/200）。题解仍在面试鸭原题库。
 
 ---
 

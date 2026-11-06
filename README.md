@@ -26,6 +26,10 @@
 
 /resources/                  # 学习资源链接
 
+/questions/                  # 面试题练习清单
+  java-basics.md             # Java 基础面试题
+  java-hot-200.md            # Java 热门面试题 200 道
+
 CLAUDE.md                    # AI 导师指令
 README.md                    # 本文件
 ```
